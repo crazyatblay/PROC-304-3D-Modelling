@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\Nanogui\CMakeFiles\affd35ead53faabda7ef38cec5a547e1\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{168CDD84-8AB4-325F-BEC6-027735E88C42}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

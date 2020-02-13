@@ -12,7 +12,6 @@
 #include <assimp/postprocess.h>
 using namespace std;
 
-//#include "lib//assimp/Importer.hpp"
 
 int main()
 {    
