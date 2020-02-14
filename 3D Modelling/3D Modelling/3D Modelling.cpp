@@ -1,28 +1,51 @@
-// 3D Modelling.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 //#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "lib/glut/GL/glut.h"
+//#include "lib/glut/GL/glut.h" CHECK THIS?
+#include "GL/glew.h"
+#include "GLFW/glfw3.h"
 
-#include <assimp/cimport.h>
+#pragma comment(lib, "assimp-vc140-mt")
+
+#include <assimp/Importer.hpp>
+#include <assimp/Exporter.hpp>
+//#include <assimp/cimport.h>
+//#include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <list>
+
 using namespace std;
+//using namespace Assimp;
 
 
 int main()
 {    
+    glfwInit();
+    GLFWwindow* window = glfwCreateWindow(1080, 720, "Fabirc Physics", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    glewInit();
 
-    glutInit();
-
-    const aiScene* scene = NULL;
+    Assimp::Importer importer;
+    
+    //const aiScene* scene = NULL;
     
     string path = "";
 
-    scene = aiImportFile(path.c_str,aiProcessPreset_TargetRealtime_MaxQuality);
+    //scene = importer.ReadFile(path,aiProcess_Triangulate);
         
+   // Exporter exporter;
+    //size_t formatCount = aiGetExportFormatCount();
+   // const list<aiExportFormatDesc>* types;
+   // const aiExportFormatDesc* format;
+   // for (int i = 0; i < (int)formatCount; i++)
+  //  {
+  //    format = aiGetExportFormatDescription(i);
+  //  }
 
+    //exporter.Export(scene, format->description, "testName", aiPostProcessSteps::aiProcess_Triangulate, NULL);
+
+//    aiExportScene(scene,aiGetExportFormatDescription() ,"textFile");
+    
 }
