@@ -1,9 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//#include "lib/glut/GL/glut.h" need to re-add glut/GLFW
+//#include "GL/glew.h"
+//#include "GL/freeglut.h"
+//#include "GLFW/glfw3.h"
+//include glm
 
-#include <assimp/Importer.hpp>
+#include "GL/glut.h"
+#include <assimp/cimport.h>
+//#include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 using namespace std;
@@ -12,29 +17,22 @@ using namespace Assimp;
 
 int main()
 {
-	/*glfwInit();
-	GLFWwindow* window = glfwCreateWindow(1080, 720, "Fabirc Physics", NULL, NULL);
-	glfwMakeContextCurrent(window);
-	glewInit();*/
+	//glfwInit();
+	//GLFWwindow* window = glfwCreateWindow(1080, 720, "Fabirc Physics", NULL, NULL);
+	//glfwMakeContextCurrent(window);
+	//glewInit();
 	//glutInit();
 
-	const aiScene* scene = NULL;
+	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
+	const char h = 'h';
+	const char* input = "er";
+	const aiScene* scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 
-	string path = "";
-	Importer importer;
-	scene = importer.ReadFile(path, aiProcess_Triangulate);
-	//scene = importer.GetScene();
-
-	//scene = aiImportFile(path.c_str,aiProcessPreset_TargetRealtime_MaxQuality);
-
-
-
-
-	Assimp::Importer importer;
+	
 
 	//const aiScene* scene = NULL;
 
-	string path = "";
+	//string path = "";
 
 	//scene = importer.ReadFile(path,aiProcess_Triangulate);
 
@@ -49,7 +47,7 @@ int main()
 
 	//exporter.Export(scene, format->description, "testName", aiPostProcessSteps::aiProcess_Triangulate, NULL);
 
-//    aiExportScene(scene,aiGetExportFormatDescription() ,"textFile");
+    //aiExportScene(scene,aiGetExportFormatDescription() ,"textFile");
 
 
 }
