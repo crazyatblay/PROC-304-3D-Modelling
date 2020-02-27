@@ -1,16 +1,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//#include "GL/glew.h"
-//#include "GL/freeglut.h"
-//#include "GLFW/glfw3.h"
-//include glm
+#include "GL/glew.h"
+#include "GL/freeglut.h"
+#include "GLFW/glfw3.h"
+//#include glm
 
 #include "GL/glut.h"
 #include <assimp/cimport.h>
 //#include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <list>
 using namespace std;
 using namespace Assimp;
 
@@ -24,11 +25,50 @@ int main()
 	//glutInit();
 
 	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
-	const char h = 'h';
-	const char* input = "er";
-	const aiScene* scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 
-	
+	const aiScene* scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+	list<aiMesh*> meshList;
+	for (int i = 0; i < scene->mNumMeshes; i++)
+	{
+
+		aiMesh* meshes = scene->mMeshes[i];
+		meshList.push_back(meshes);
+		//meshes->mNumVertices
+	}
+	//list<aiVector3D> verticies;
+	//meshes.push_back(scene->mMeshes);
+
+	list<aiVector3D*> verticiesList;
+
+	for (int i = 0; i < meshList.size(); i++)
+	{
+
+		//aiVector3D verticies = meshList[i]->mVertices;
+		if (meshList.front()->mNumVertices > 0)
+		{
+			aiMesh* temp = meshList.front();
+			
+			//verticiesList.push_front(meshList.front()->mVertices);
+			for (int j = 0; j < temp->mNumVertices; j++)
+			{
+				verticiesList.push_front(&temp->mVertices[j]);
+			}
+			printf("home");
+			
+		}
+		//float xVal = verticies->x;
+
+		//printf("%f", xVal);
+	}
+
+
+
+
+	aiReleaseImport(scene);
+
+	aiDetachAllLogStreams();
+
+
 
 	//const aiScene* scene = NULL;
 
@@ -47,7 +87,7 @@ int main()
 
 	//exporter.Export(scene, format->description, "testName", aiPostProcessSteps::aiProcess_Triangulate, NULL);
 
-    //aiExportScene(scene,aiGetExportFormatDescription() ,"textFile");
+	//aiExportScene(scene,aiGetExportFormatDescription() ,"textFile");
 
 
 }
