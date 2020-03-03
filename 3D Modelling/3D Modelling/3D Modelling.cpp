@@ -12,21 +12,69 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <vector>
+#include <iostream>
 using namespace std;
 using namespace Assimp;
+
+/*given in blender:
+dae=0
+abc=? Not going to support
+ply=7/8(inline/binary)
+stl=5/6(inline/binary)
+fbx=17/18(inline/binary)
+glb/gltf=10/11(inline/binary)
+obj=3/4
+.x3d=6
+*/
+enum ExportType
+{
+	dae=0,
+	obj = 4,//incl.mat:3
+	stl=5,//bin=6
+	ply=7,//bin=8
+	glb=10,//bin=11 11, might be gltf?
+	x3d=16,
+	fbx=18,//bin=17
+};
+
+aiReturn saveScene(const aiScene* scene,ExportType ex)
+{
+	size_t exportNumbers = aiGetExportFormatCount();
+	const char* desc;
+	printf("Avaliable formats");
+	for (int i = 0; i < exportNumbers; i++)
+	{
+		desc = aiGetExportFormatDescription(i)->description;
+		printf(desc);
+		printf("\n");
+	}
+	desc = aiGetExportFormatDescription(4)->description;
+	return AI_FAILURE;
+	//return aiExportScene(scene, aiGetExportFormatDescription(4)->id, "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\Line.obj", aiProcess_Triangulate);
+
+}
 
 
 int main()
 {
-	//glfwInit();
-	//GLFWwindow* window = glfwCreateWindow(1080, 720, "Fabirc Physics", NULL, NULL);
-	//glfwMakeContextCurrent(window);
-	//glewInit();
+#pragma region 
+	glfwInit();
+	GLFWwindow* window = glfwCreateWindow(1080, 720, "3D Model Loading", NULL, NULL);
+	glfwMakeContextCurrent(window);
+	glewInit();
 	//glutInit();
+#pragma endregion Setup
 
+#pragma region 
 	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
+	printf("Input File Location:\n");
+//	cin >> path;
 
 	const aiScene* scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+
+#pragma endregion Loading 
+
+#pragma region
 	vector<aiMesh*> meshList;
 	for (int i = 0; i < scene->mNumMeshes; i++)
 	{
@@ -62,6 +110,9 @@ int main()
 		//printf("%f", xVal);
 	}
 
+#pragma endregion Proccess Data
+
+#pragma region
 	///Test operation
 	for (int test = 0; test < verticiesList.size(); test++)
 	{
@@ -70,24 +121,18 @@ int main()
 		addTest = addTest + addTest;
 
 		val->x = addTest.x;
-		val->y = addTest.y;
+		val->y = 0;//addTest.y;
 		val->z = 0;//addTest.z;
 		verticiesList[test] = val;
 	}
 
 	//scene->mMeshes[0]->mVertices;
+#pragma endregion Editing Data
 
-	size_t exportNumbers = aiGetExportFormatCount();
-	const char* desc;
-	printf("Avaliable formats");
-	for (int i = 0; i < exportNumbers; i++)
-	{
-		desc = aiGetExportFormatDescription(i)->description;
-		printf(desc);
-		printf("\n");
-	}
-	desc= aiGetExportFormatDescription(4)->description;
-	aiReturn status = aiExportScene(scene, aiGetExportFormatDescription(4)->id, "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\flat.obj", aiProcess_Triangulate);
+#pragma region 
+	ExportType ex = obj;
+	aiReturn status = saveScene(scene, ex);
+
 	if (status == AI_SUCCESS)
 	{
 		printf("\nSuccessfully saved\n");
@@ -96,10 +141,13 @@ int main()
 	{
 		printf("\nError saving.\n");
 	}
-	
-	
+#pragma endregion Export
+
+#pragma region
 	aiReleaseImport(scene);
 
 	aiDetachAllLogStreams();
-
+#pragma endregion Cleanup
 }
+
+
