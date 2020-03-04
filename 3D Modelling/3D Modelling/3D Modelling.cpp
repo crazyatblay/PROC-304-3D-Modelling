@@ -28,30 +28,112 @@ obj=3/4
 */
 enum ExportType
 {
-	dae=0,
-	obj = 4,//incl.mat:3
-	stl=5,//bin=6
-	ply=7,//bin=8
-	glb=10,//bin=11 11, might be gltf?
-	x3d=16,
-	fbx=18,//bin=17
+	none = -1,	//Used for Unrecognised formats
+	dae = 0,	//Can't read, unsure if working
+	obj = 4,	//incl.mat:3
+	//stl = 5,	//bin=6- Currently havng Issues: Under Review
+	ply = 7,	//bin=8
+	//glb = 10,	//bin=11 11, might be gltf?, see stl
+	x3d = 16,	//Can't read, unsure if working
+	fbx = 18,	//bin=17
 };
 
-aiReturn saveScene(const aiScene* scene,ExportType ex)
+ExportType compareInput(string typeName)
 {
-	size_t exportNumbers = aiGetExportFormatCount();
+	if (typeName == "dae")
+	{
+		return ExportType(0);
+	}
+	else if (typeName == "obj")
+	{
+		return ExportType(4);
+	}
+	else if (typeName == "stl")
+	{
+		return ExportType(5);
+	}
+	else if (typeName == "ply")
+	{
+		return ExportType(7);
+	}
+	else if (typeName == "glb")
+	{
+		return ExportType(10);
+	}
+	else if (typeName == "x3d")
+	{
+		return ExportType(16);
+	}
+	else if (typeName == "fbx")
+	{
+		return ExportType(18);
+	}
+	return ExportType(-1);
+}
+
+//need to include fileName options
+aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
+{
+	/*Gets a list of all avaliable formats*/
 	const char* desc;
-	printf("Avaliable formats");
+	/*size_t exportNumbers = aiGetExportFormatCount();
+	std::printf("Avaliable formats");
 	for (int i = 0; i < exportNumbers; i++)
 	{
 		desc = aiGetExportFormatDescription(i)->description;
 		printf(desc);
-		printf("\n");
-	}
-	desc = aiGetExportFormatDescription(4)->description;
-	return AI_FAILURE;
-	//return aiExportScene(scene, aiGetExportFormatDescription(4)->id, "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\Line.obj", aiProcess_Triangulate);
+		printf("%d\n", i);
+	}*/
 
+	try {
+		desc = aiGetExportFormatDescription(ex)->description;
+		std::printf(desc);
+	}
+	catch (exception e)
+	{
+		std::printf("File Type unavaliable");
+		return AI_FAILURE;
+	}
+
+	string output = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\";
+	output.append(FileName);
+
+
+#pragma region 	
+	switch (ex)
+	{
+	case 0:
+		output.append(".dae");
+		break;
+	case 3:
+	case 4:
+	default:
+		output.append(".obj");
+		break;
+	case 5:
+	case 6:
+		output.append(".stl");
+		break;
+	case 7:
+	case 8:
+		output.append(".ply");
+		break;
+	case 10:
+	case 11:
+		output.append(".glb");
+		break;
+	case 16:
+		output.append(".x3d");
+		break;
+	case 17:
+	case 18:
+		output.append(".fbx");
+		break;
+	}
+
+#pragma endregion Switch
+
+	return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 }
 
 
@@ -62,13 +144,14 @@ int main()
 	GLFWwindow* window = glfwCreateWindow(1080, 720, "3D Model Loading", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	glewInit();
+	printf("Finished Initilisation");
 	//glutInit();
 #pragma endregion Setup
 
 #pragma region 
-	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
+	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\Sphericon.stl";
 	printf("Input File Location:\n");
-//	cin >> path;
+	//	cin >> path;
 
 	const aiScene* scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 
@@ -121,7 +204,7 @@ int main()
 		addTest = addTest + addTest;
 
 		val->x = addTest.x;
-		val->y = 0;//addTest.y;
+		val->y = addTest.y;
 		val->z = 0;//addTest.z;
 		verticiesList[test] = val;
 	}
@@ -130,8 +213,33 @@ int main()
 #pragma endregion Editing Data
 
 #pragma region 
-	ExportType ex = obj;
-	aiReturn status = saveScene(scene, ex);
+	string fileName;
+	ExportType type;
+	bool validType = false;
+
+	printf("Enter File name:");
+	cin >> fileName;
+
+	printf("Enter Export file Type:");		
+	while (validType != true)
+	{
+		string typeString;
+		printf("\nAvailable types:\ndae\nobj\nstl\nply\nglb\nx3d\nfbx\n");		
+		cin >> typeString;
+
+		type = compareInput(typeString);
+
+		if (type != ExportType(-1))
+		{
+			validType = true;
+		}
+		else
+		{
+			printf("The file type specified either is not suupported by the system");
+		}
+	}
+
+	aiReturn status = saveScene(scene, fileName, type);
 
 	if (status == AI_SUCCESS)
 	{
