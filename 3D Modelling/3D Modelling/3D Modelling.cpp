@@ -4,9 +4,11 @@
 #include "GL/glew.h"
 #include "GL/freeglut.h"
 #include "GLFW/glfw3.h"
-//#include glm
 
+
+//#include "lib/GL/glut.h" should be able to remove this folder and glut ofolder in lib?
 #include "GL/glut.h"
+#include "lib/glm/glm.hpp"
 #include <assimp/cimport.h>
 #include <assimp/cexport.h>
 #include <assimp/scene.h>
@@ -37,6 +39,25 @@ enum ExportType
 	x3d = 16,	//Can't read, unsure if working
 	fbx = 18,	//bin=17
 };
+
+enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 1 };
+enum Buffer_IDs { ArrayBuffer, NumBuffers = 3 };
+enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2 };
+
+
+GLuint VAO[NumVAOs];
+
+GLuint Buffers[NumBuffers];
+GLuint NumVertices = 0;
+
+GLuint program;
+
+//glm::mat4 model;
+//glm::mat4 view;
+//glm::mat4 projection;
+//aiMatrix4x4 matrix;
+
+#define BUFFER_OFFSET(a)((void*)(a))
 
 ExportType compareInput(string typeName)
 {
@@ -71,7 +92,6 @@ ExportType compareInput(string typeName)
 	return ExportType(-1);
 }
 
-//need to include fileName options
 aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 {
 	/*Gets a list of all avaliable formats*/
@@ -136,6 +156,21 @@ aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 	return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 }
 
+void display()
+{
+	//clears existing objects
+	glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+
+	//culls back faces
+	glEnable(GL_CULL_FACE);//keep only this
+
+	//binds VAO
+	glBindVertexArray(VAO[Triangles]);
+
+	//rotate
+}
+
 
 int main()
 {
@@ -194,6 +229,23 @@ int main()
 	}
 
 #pragma endregion Proccess Data
+
+#pragma region
+
+
+	while (!glfwWindowShouldClose(window))
+	{
+
+		//display();
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+
+		//displayFabric.UpdateFabric();
+		//UpdateModel();
+	}
+
+#pragma endregion Display
+
 
 #pragma region
 	///Test operation
