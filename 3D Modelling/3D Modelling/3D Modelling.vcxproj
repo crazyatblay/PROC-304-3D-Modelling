@@ -165,9 +165,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="3D Modelling.cpp" />
+    <ClCompile Include="Conversion.cpp" />
+    <ClCompile Include="ShaderLoad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Conversion.h" />
+    <ClInclude Include="ShaderLoad.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
