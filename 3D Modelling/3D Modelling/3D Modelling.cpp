@@ -67,14 +67,14 @@ aiMatrix4x4 matrix;
 vector<GLuint> parseFaces(vector<aiFace*> faces)
 {
 	vector<GLuint> ind;
-	for (int i = 0; i < faces.size; i++)
+	for (int i = 0; i < faces.size(); i++)
 	{
 		vector<unsigned int> locInd;
-		for (int j=0;j<faces[i]->mNumIndices;i++)
+		for (unsigned int j = 0; j < faces[i]->mNumIndices; j++)
 		{
 			unsigned int locInd = faces[i]->mIndices[j];
 			ind.push_back(locInd);
-		}		
+		}
 	}
 	return ind;
 }
@@ -103,7 +103,7 @@ void LoadModel()
 #pragma region
 	vector<aiMesh*> meshList;
 	vector<aiFace*> facesList;
-	for (int i = 0; i < scene->mNumMeshes; i++)
+	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
 	{
 
 		aiMesh* meshes = scene->mMeshes[i];
@@ -123,11 +123,11 @@ void LoadModel()
 			aiMesh* temp = meshList.front();
 
 			//verticiesList.push_front(meshList.front()->mVertices);
-			for (int j = 0; j < temp->mNumVertices; j++)
+			for (unsigned int j = 0; j < temp->mNumVertices; j++)
 			{
 				verticiesList.push_back(&temp->mVertices[j]);
 			}
-			for (int j = 0; j < temp->mNumFaces; i++)
+			for (unsigned int j = 0; j < temp->mNumFaces; j++)
 			{
 				facesList.push_back(&temp->mFaces[j]);
 			}
@@ -136,6 +136,7 @@ void LoadModel()
 	}
 
 
+	vector<GLuint> indicies = parseFaces(facesList);
 #pragma endregion Proccess Data
 
 
@@ -155,11 +156,12 @@ void LoadModel()
 	//scene->mMeshes[0]->mVertices;*/
 #pragma endregion Editing Data
 
-	vector<GLuint> indicies = parseFaces(facesList);
 	vector<glm::vec3> glmVerticies;
+	
+	
 	for (int i = 0; i < verticiesList.size(); i++)
 	{
-		glmVerticies.push_back(Conversion::Vec3Conversion(verticiesList[i]));
+		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
 	}
 
 	vector<vec3> finalPoints;
@@ -200,7 +202,7 @@ void LoadModel()
 	//enables vertex arrays for verticies, colours, and normals
 	glEnableVertexAttribArray(vPosition);
 	glEnableVertexAttribArray(cPosition);
-	glEnableVertexAttribArray(vNormal);
+	//glEnableVertexAttribArray(vNormal);
 
 	indicies.clear();
 	finalPoints.clear();
@@ -316,7 +318,24 @@ void display()
 	//binds VAO
 	glBindVertexArray(VAO[Triangles]);
 
-	//rotate
+
+	model = glm::mat4(1.0f);
+	model = glm::scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
+	
+	model = rotate(model, radians(-135.0f), vec3(0.0f, 1.0f, 0.0f));
+	model = rotate(model, radians(-40.0f), vec3(1.0f, 0.0f, 1.0f));
+
+
+	glm::mat4 mv = view * model;
+	projection = glm::perspective(45.0f, 4.0f / 3, 0.1f, 20.0f);
+
+	int mvLoc = glGetUniformLocation(program, "mv_matrix");
+	glUniformMatrix4fv(mvLoc, 1, GL_FALSE, glm::value_ptr(mv));
+	//adding the Uniform to the shader
+	int pLoc = glGetUniformLocation(program, "p_matrix");
+	glUniformMatrix4fv(pLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+	glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 }
 
 
@@ -332,7 +351,7 @@ int main()
 #pragma endregion Setup
 
 #pragma region 
-	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\Sphericon.stl";
+	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
 	printf("Input File Location:\n");
 	//	cin >> path;
 
@@ -348,7 +367,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 
-		//display();
+		display();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
