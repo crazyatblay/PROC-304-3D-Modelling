@@ -13,6 +13,7 @@
 #include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <nanogui/nanogui.h>
 #include <vector>
 #include <iostream>
 
@@ -20,6 +21,7 @@
 #include "ShaderLoad.h"
 using namespace std;
 using namespace Assimp;
+using namespace nanogui;
 
 /*given in blender:
 dae=0
@@ -347,7 +349,16 @@ int main()
 	glfwMakeContextCurrent(window);
 	glewInit();
 	printf("Finished Initilisation");
-	//glutInit();
+
+	Screen* screenCurrent = new Screen();
+	screenCurrent->initialize(window, true);
+	FormHelper* gui = new FormHelper(screenCurrent);
+	
+	//screenCurrent->initilise1
+
+	/*Button *save (window, "Save");
+	save->setCallback([] {cout << "pushed" << endl; });*/
+
 #pragma endregion Setup
 
 #pragma region 
@@ -356,7 +367,11 @@ int main()
 	//	cin >> path;
 
 	scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
-
+	string outputName = "teapot";
+	ExportType EnumType=ExportType(4);
+	gui->addVariable("FileName", outputName, true);
+	gui->addVariable("File Types", EnumType, false)->setItems({ "dae","obj","ply","fbx","3dx","fbx" });
+	gui->addButton("save", [&]() { saveScene(scene, outputName, EnumType); });
 #pragma endregion Loading 
 
 

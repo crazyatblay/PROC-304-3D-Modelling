@@ -25,7 +25,7 @@
 #  pragma warning(disable : 4127) // warning C4127: conditional expression is constant
 #endif
 
-#include <Eigen/Core>
+#include "Eigen/Core"
 #include <stdint.h>
 #include <array>
 #include <vector>

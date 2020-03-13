@@ -75,8 +75,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\nano\include;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\nano\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -112,7 +112,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc142-mt.lib;nanogui.lib%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PropertyGroup>
       <PostBuildEvent>
@@ -167,6 +167,7 @@
     <ClCompile Include="3D Modelling.cpp" />
     <ClCompile Include="Conversion.cpp" />
     <ClCompile Include="ShaderLoad.cpp" />
+    <ClCompile Include="UIInteractionInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -13,7 +13,7 @@
 #pragma once
 
 #include <nanogui/opengl.h>
-#include <Eigen/Geometry>
+#include "Eigen/Geometry"
 #include <map>
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
