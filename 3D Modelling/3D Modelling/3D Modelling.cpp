@@ -1,3 +1,17 @@
+#if defined(NANOGUI_GLAD)
+#if defined(NANOGUI_SHARED) && !defined(GLAD_GLAPI_EXPORT)
+#define GLAD_GLAPI_EXPORT
+#endif
+
+#include <glad/glad.h>
+#else
+#if defined(__APPLE__)
+#define GLFW_INCLUDE_GLCOREARB
+#else
+#define GL_GLEXT_PROTOTYPES
+#endif
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -62,6 +76,11 @@ glm::mat4 model;
 glm::mat4 view;
 glm::mat4 projection;
 aiMatrix4x4 matrix;
+float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
+double xPos, yPos;
+bool leftPress;
+
+Screen* screenCurrent = nullptr;
 
 
 #define BUFFER_OFFSET(a)((void*)(a))
@@ -159,8 +178,8 @@ void LoadModel()
 #pragma endregion Editing Data
 
 	vector<glm::vec3> glmVerticies;
-	
-	
+
+
 	for (int i = 0; i < verticiesList.size(); i++)
 	{
 		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
@@ -244,6 +263,8 @@ ExportType compareInput(string typeName)
 	return ExportType(-1);
 }
 
+
+
 aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 {
 	/*Gets a list of all avaliable formats*/
@@ -323,9 +344,11 @@ void display()
 
 	model = glm::mat4(1.0f);
 	model = glm::scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
-	
-	model = rotate(model, radians(-135.0f), vec3(0.0f, 1.0f, 0.0f));
-	model = rotate(model, radians(-40.0f), vec3(1.0f, 0.0f, 1.0f));
+
+
+	model = rotate(model, radians(xRotation), vec3(0.0f, 1.0f, .0f));
+	model = rotate(model, radians(yRotation), vec3(1.0f, 0.0f, 0.0f));
+	model = rotate(model, radians(zRotation), vec3(0.0f, 0.0f, 1.0f));
 
 
 	glm::mat4 mv = view * model;
@@ -341,61 +364,10 @@ void display()
 }
 
 
-int main()
+void saveSetUp()
 {
-#pragma region 
-	glfwInit();
-	GLFWwindow* window = glfwCreateWindow(1080, 720, "3D Model Loading", NULL, NULL);
-	glfwMakeContextCurrent(window);
-	glewInit();
-	printf("Finished Initilisation");
-
-	Screen* screenCurrent = new Screen();
-	screenCurrent->initialize(window, true);
-	FormHelper* gui = new FormHelper(screenCurrent);
-	
-	//screenCurrent->initilise1
-
-	/*Button *save (window, "Save");
-	save->setCallback([] {cout << "pushed" << endl; });*/
-
-#pragma endregion Setup
-
-#pragma region 
-	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
-	printf("Input File Location:\n");
-	//	cin >> path;
-
-	scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
-	string outputName = "teapot";
-	ExportType EnumType=ExportType(4);
-	gui->addVariable("FileName", outputName, true);
-	gui->addVariable("File Types", EnumType, false)->setItems({ "dae","obj","ply","fbx","3dx","fbx" });
-	gui->addButton("save", [&]() { saveScene(scene, outputName, EnumType); });
-#pragma endregion Loading 
-
-
-	LoadModel();
-#pragma region
-
-
-	while (!glfwWindowShouldClose(window))
-	{
-
-		display();
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-
-		//displayFabric.UpdateFabric();
-		//UpdateModel();
-	}
-
-#pragma endregion Display
-
-
-#pragma region 
-	string fileName;
-	ExportType type;
+	string fileName = "teapot";
+	ExportType type = ExportType(4);
 	bool validType = false;
 
 	printf("Enter File name:");
@@ -430,7 +402,121 @@ int main()
 	{
 		printf("\nError saving.\n");
 	}
-#pragma endregion Export
+}
+
+void mouse_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	if (button == GLFW_MOUSE_BUTTON_1)
+	{
+		double localXPos, localYPos;
+		int width, height;
+		localXPos = localYPos = 0;
+		width = height = 0;
+
+		glfwGetWindowSize(window, &width, &height);
+		glfwGetCursorPos(window, &localXPos, &localYPos);
+
+		float x = (2.0f * localXPos) / width - 1.0f;
+		float y = 1.0f - (2.0f * localYPos) / height;
+		float z = 1.0f;
+		vec3 nearPoint(x, y, z);
+		vec3 farPoint(x, y, -1.0f);
+		vec3 direction = farPoint - nearPoint;
+		direction=normalize(direction);
+		
+
+		if (action == GLFW_PRESS)
+		{
+			leftPress = true;
+		}
+		else if (action == GLFW_RELEASE)
+		{
+			leftPress = false;
+		}
+	}
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_S && mods == GLFW_MOD_CONTROL)
+	{
+		saveSetUp();
+	}
+}
+
+
+void CheckEvents(GLFWwindow* window)
+{
+	if (leftPress == true)
+	{
+		double localXPos, localYPos;
+		localXPos = localYPos = 0;
+
+		//glfwSetCursorPos(window, 100, 100);
+		glfwGetCursorPos(window, &localXPos, &localYPos);
+		if (!(xPos == 0 && yPos == 0))
+		{
+			xRotation -= xPos - (float)localXPos;
+			yRotation -= yPos - (float)localYPos;
+
+		}
+		xPos = localXPos;
+		yPos = localYPos;
+	}
+}
+
+int main()
+{
+#pragma region 
+
+	glfwInit();
+
+	GLFWwindow* window = nullptr;
+	window = glfwCreateWindow(1080, 720, "3D Model Loading", NULL, NULL);
+	glfwMakeContextCurrent(window);
+	glewInit();
+	printf("Finished Initilisation");
+
+#pragma endregion Setup
+
+#pragma region 
+	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
+	printf("Input File Location:\n");
+	//	cin >> path;
+
+	scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == nullptr)
+	{
+		printf("Scene not loaded");
+	}
+	else
+	{
+		printf("Success");
+	}
+	LoadModel();
+#pragma endregion Loading
+
+#pragma region
+
+	glfwSetKeyCallback(window, key_callback);
+	glfwSetMouseButtonCallback(window, mouse_callback);
+
+
+	while (!glfwWindowShouldClose(window))
+	{
+		//screenCurrent->drawContents();
+
+		display();
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+		CheckEvents(window);
+
+
+		//displayFabric.UpdateFabric();
+		//UpdateModel();
+	}
+
+#pragma endregion Display
 
 #pragma region
 	aiReleaseImport(scene);

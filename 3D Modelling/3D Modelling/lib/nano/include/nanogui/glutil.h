@@ -245,8 +245,8 @@ public:
     }
 
     /// Initialize a uniform parameter with a boolean value
-    void setUniform(const std::string &name, bool value, bool warn = true) {
-        glUniform1i(uniform(name, warn), (int)value);
+    void setUniform(const std::string &name, bool value, bool warn = true) {                
+        //glUniform1i(uniform(name, warn), (int)value);
     }
 
     /// Initialize a uniform parameter with an integer value
@@ -258,7 +258,7 @@ public:
     /// Initialize a uniform parameter with a floating point value
     template <typename T, typename std::enable_if<detail::type_traits<T>::integral == 0, int>::type = 0>
     void setUniform(const std::string &name, T value, bool warn = true) {
-        glUniform1f(uniform(name, warn), (float) value);
+       // glUniform1f(uniform(name, warn), (float) value);
     }
 
     /// Initialize a uniform parameter with a 2D vector (int)

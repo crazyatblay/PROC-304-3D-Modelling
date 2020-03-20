@@ -24,7 +24,7 @@
     <ClCompile Include="ShaderLoad.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UIInteractionInterface.cpp">
+    <ClCompile Include="TestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -98,6 +98,11 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
+xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)" 
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -107,23 +112,18 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\nano\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;nanogui.lib%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc142-mt.lib;nanogui.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PropertyGroup>
-      <PostBuildEvent>
-        <Command>
-          echo on
-          echo " test value: $(ProjDir) false?"
-          echo off
-          xcopy "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
-        </Command>
-      </PostBuildEvent>
-    </PropertyGroup>
+    <PostBuildEvent>
+      <Command>xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
+xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)" 
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -143,6 +143,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
+xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)" 
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -162,12 +167,17 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
+xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)" 
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="3D Modelling.cpp" />
     <ClCompile Include="Conversion.cpp" />
     <ClCompile Include="ShaderLoad.cpp" />
-    <ClCompile Include="UIInteractionInterface.cpp" />
+    <ClCompile Include="TestApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
