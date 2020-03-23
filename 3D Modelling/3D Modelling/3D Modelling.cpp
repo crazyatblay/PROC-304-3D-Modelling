@@ -341,7 +341,6 @@ void display()
 	//binds VAO
 	glBindVertexArray(VAO[Triangles]);
 
-
 	model = glm::mat4(1.0f);
 	model = glm::scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
 
@@ -362,7 +361,6 @@ void display()
 
 	glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 }
-
 
 void saveSetUp()
 {
@@ -419,6 +417,13 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		float x = (2.0f * localXPos) / width - 1.0f;
 		float y = 1.0f - (2.0f * localYPos) / height;
 		float z = 1.0f;
+
+		vec4 ray_clip(x, y, -1.0, 1.0);
+		vec4 ray_eye = inverse(projection) * ray_clip;
+		ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+		vec3 ray_wor = (inverse(view) * ray_eye);
+		ray_wor = normalize(ray_wor);
+
 		vec3 nearPoint(x, y, z);
 		vec3 farPoint(x, y, -1.0f);
 		vec3 direction = farPoint - nearPoint;
@@ -500,7 +505,7 @@ int main()
 
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_callback);
-
+	glPolygonMode(GL_FRONT, GL_FILL);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -522,6 +527,11 @@ int main()
 	aiReleaseImport(scene);
 
 	aiDetachAllLogStreams();
+
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
+	return 0;
 #pragma endregion Cleanup
 }
 
