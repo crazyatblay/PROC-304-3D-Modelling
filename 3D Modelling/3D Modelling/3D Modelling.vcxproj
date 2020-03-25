@@ -177,6 +177,7 @@ xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)"
     <ClCompile Include="3D Modelling.cpp" />
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="Conversion.cpp" />
+    <ClCompile Include="Model.cpp" />
     <ClCompile Include="ShaderLoad.cpp" />
     <ClCompile Include="TestApp.cpp" />
   </ItemGroup>

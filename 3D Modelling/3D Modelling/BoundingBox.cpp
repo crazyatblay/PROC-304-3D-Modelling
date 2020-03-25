@@ -7,14 +7,116 @@ using namespace std;
 class BoundingBox {
 
 private:
+	void UpdateMaxMin()
+	{
+		maxX = minX = points[0].x;
+		maxY = minY = points[0].y;
+		maxZ = minY = points[0].z;
 
+		for (int i = 1; i < points.size(); i++)
+		{
+			if (points[i].x < minX)
+			{
+				minX = points[i].x;
+			}
+			else if (points[i].x > minX)
+			{
+				maxX = points[i].x;
+			}
 
+			if (points[i].y < minY)
+			{
+				minY = points[i].y;
+			}
+			else if (points[i].y > minY)
+			{
+				maxY = points[i].y;
+			}
+
+			if (points[i].z < minZ)
+			{
+				minZ = points[i].z;
+			}
+			else if (points[i].z > minZ)
+			{
+				maxZ = points[i].z;
+			}
+		}
+
+	}
+	//ray direction should be normalized
+	bool rayIntersects(glm::vec3 rayStart, glm::vec3 rayDirection)
+	{
+		float tmin = (minX - rayStart) / r.dir.x;
+		float tmax = (maxX - rayStart) / r.dir.x;
+
+		if (tmin > tmax) swap(tmin, tmax);
+
+		float tymin = (minY - rayStart.y) / r.dir.y;
+		float tymax = (maxY - rayStart.y) / r.dir.y;
+
+		if (tymin > tymax) swap(tymin, tymax);
+
+		if ((tmin > tymax) || (tymin > tmax))
+			return false;
+
+		if (tymin > tmin)
+			tmin = tymin;
+
+		if (tymax < tmax)
+			tmax = tymax;
+
+		float tzmin = (min.z - r.orig.z) / r.dir.z;
+		float tzmax = (max.z - r.orig.z) / r.dir.z;
+
+		if (tzmin > tzmax) swap(tzmin, tzmax);
+
+		if ((tmin > tzmax) || (tzmin > tmax))
+			return false;
+
+		if (tzmin > tmin)
+			tmin = tzmin;
+
+		if (tzmax < tmax)
+			tmax = tzmax;
+
+		return true;
+
+	}
+
+	bool isWithinBox(glm::vec3 point)
+	{
+		if (point.x <= maxX && point.x >= minX &&
+			point.y <= maxY && point.y >= minY &&
+			point.z <= maxZ && point.z >= minZ)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool isWithinaBox(BoundingBox box)
+	{
+		if (minX <= box.maxX && maxX >= box.minX &&
+			minY <= box.maxY && maxY >= box.minY &&
+			minZ <= box.maxZ && maxZ >= box.minZ)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
 
 	bool checkUniuque(vector<float> copy, float value)
 	{
 		int size = copy.size();
 		copy.erase(remove(copy.begin(), copy.end(), value), copy.end());
-		if(copy.size()+1==size)
+		if (copy.size() + 1 == size)
 		{
 			return true;
 		}
@@ -27,6 +129,13 @@ private:
 public:
 	//8 points: order- MaxZ,MaxY,MinX,MaxX,MinY,MinZ
 	vector<glm::vec3> points;
+
+	float maxX, maxY, maxZ, minX, minY, minZ;
+
+	BoundingBox()
+	{
+
+	}
 
 	BoundingBox(vector<glm::vec3> pointsInsert)
 	{
@@ -57,7 +166,7 @@ public:
 			for (int j = 0; j < 2; j++)
 			{
 				for (int k = 0; k < 2; k++)
-				{ 
+				{
 					points.push_back(point);
 					point.x = maxX;
 				}
@@ -66,7 +175,8 @@ public:
 			}
 			point.y = maxY;
 			point.z = minZ;
-		}				
+		}
+		UpdateMaxMin();
 	}
 
 
