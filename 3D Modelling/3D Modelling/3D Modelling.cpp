@@ -33,6 +33,7 @@
 
 #include "Conversion.h"
 #include "ShaderLoad.h"
+#include "Model.cpp"
 using namespace std;
 using namespace Assimp;
 using namespace nanogui;
@@ -71,6 +72,7 @@ GLuint NumVertices = 0;
 
 GLuint program;
 const aiScene* scene;
+vector<Model> models;
 
 glm::mat4 model;
 glm::mat4 view;
@@ -102,26 +104,8 @@ vector<GLuint> parseFaces(vector<aiFace*> faces)
 
 void LoadModel()
 {
-	//Memory Management
-	glDeleteBuffers(NumBuffers, Buffers);
-	glDeleteProgram(program);
-
-	//generates vertex array data
-	glGenVertexArrays(NumVAOs, VAO);
-	glBindVertexArray(VAO[Triangles]);
-
-	ShaderInfo  shaders[] =
-	{
-		{ GL_VERTEX_SHADER, "media/triangles.vert" },
-		{ GL_FRAGMENT_SHADER, "media/triangles.frag" },
-		{ GL_NONE, NULL }
-	};
-
-	program = LoadShaders(shaders);
-	glUseProgram(program);
 
 
-#pragma region
 	vector<aiMesh*> meshList;
 	vector<aiFace*> facesList;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
@@ -156,39 +140,49 @@ void LoadModel()
 		}
 	}
 
-
-	vector<GLuint> indicies = parseFaces(facesList);
-#pragma endregion Proccess Data
-
-
-#pragma region/*
-	for (int test = 0; test < verticiesList.size(); test++)
-	{
-		aiVector3D* val = verticiesList[test];
-		aiVector3D addTest(val->x, val->y, val->z);
-		addTest = addTest + addTest;
-
-		val->x = addTest.x;
-		val->y = addTest.y;
-		val->z = 0;//addTest.z;
-		verticiesList[test] = val;
-	}
-
-	//scene->mMeshes[0]->mVertices;*/
-#pragma endregion Editing Data
-
 	vector<glm::vec3> glmVerticies;
 
+	vector<GLuint> indicies = parseFaces(facesList);
 
 	for (int i = 0; i < verticiesList.size(); i++)
 	{
 		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
 	}
+	Model newModel(glmVerticies, indicies);
+	models.push_back(newModel);
+	indicies.clear();
+	glmVerticies.clear();
+
+}
+
+void ParseModels()
+{
+	//Memory Management
+	glDeleteBuffers(NumBuffers, Buffers);
+	glDeleteProgram(program);
+
+	//generates vertex array data
+	glGenVertexArrays(NumVAOs, VAO);
+	glBindVertexArray(VAO[Triangles]);
+
+	ShaderInfo  shaders[] =
+	{
+		{ GL_VERTEX_SHADER, "media/triangles.vert" },
+		{ GL_FRAGMENT_SHADER, "media/triangles.frag" },
+		{ GL_NONE, NULL }
+	};
+
+	program = LoadShaders(shaders);
+	glUseProgram(program);
 
 	vector<vec3> finalPoints;
-	for (int i = 0; i < indicies.size(); i++)
+
+	for (int j = 0; j < models.size(); j++)
 	{
-		finalPoints.push_back(glmVerticies[indicies[i]]);
+		for (int i = 0; i < models[j].indicies.size(); i++)
+		{
+			finalPoints.push_back(models[j].points[models[j].indicies[i]]);
+		}
 	}
 
 	NumVertices = finalPoints.size();
@@ -225,7 +219,6 @@ void LoadModel()
 	glEnableVertexAttribArray(cPosition);
 	//glEnableVertexAttribArray(vNormal);
 
-	indicies.clear();
 	finalPoints.clear();
 }
 
@@ -414,6 +407,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		glfwGetWindowSize(window, &width, &height);
 		glfwGetCursorPos(window, &localXPos, &localYPos);
 
+#pragma region
 		float x = (2.0f * localXPos) / width - 1.0f;
 		float y = 1.0f - (2.0f * localYPos) / height;
 		float z = 1.0f;
@@ -426,9 +420,54 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 		vec3 nearPoint(x, y, z);
 		vec3 farPoint(x, y, -1.0f);
-		vec3 direction = farPoint - nearPoint;
-		direction=normalize(direction);
-		
+
+		GLint viewport[4]; //var to hold the viewport info
+		GLdouble modelview[16]; //var to hold the modelview info
+		GLdouble projection[16]; //var to hold the projection matrix info
+		GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
+		GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
+
+		glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+		glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
+		glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+
+		winX = (float)x;
+		winY = (float)viewport[3] - (float)y;
+		winZ = -100;
+
+		//get the world coordinates from the screen coordinates
+		gluUnProject(winX, winY, winZ, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+		vec3 worldPos(worldX, worldY, worldZ);
+		vec3 direction = worldPos - nearPoint;
+		direction = normalize(direction);
+
+
+#pragma endregion
+
+		int intersectModel = -1;
+		for (int i = 0; i < models.size(); i++)
+		{
+			if (models[i].boundBox.rayIntersects(nearPoint, direction))
+			{
+				intersectModel = i;
+				break;
+			}
+		}
+
+		if (intersectModel != -1)
+		{
+			int closest = 0;
+			for (int i = 1; i < models[intersectModel].points.size(); i++)
+			{
+				if (distance(nearPoint, models[intersectModel].points[i]) < distance(nearPoint, models[intersectModel].points[closest]))
+				{
+					closest = i;
+				}
+
+			}
+
+			models[intersectModel].points[closest] += vec3(1, 1, 1);
+		}
 
 		if (action == GLFW_PRESS)
 		{
@@ -499,6 +538,7 @@ int main()
 		printf("Success");
 	}
 	LoadModel();
+	ParseModels();
 #pragma endregion Loading
 
 #pragma region

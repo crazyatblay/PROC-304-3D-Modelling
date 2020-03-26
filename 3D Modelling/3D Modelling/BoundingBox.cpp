@@ -45,44 +45,7 @@ private:
 
 	}
 	//ray direction should be normalized
-	bool rayIntersects(glm::vec3 rayStart, glm::vec3 rayDirection)
-	{
-		float tmin = (minX - rayStart) / r.dir.x;
-		float tmax = (maxX - rayStart) / r.dir.x;
-
-		if (tmin > tmax) swap(tmin, tmax);
-
-		float tymin = (minY - rayStart.y) / r.dir.y;
-		float tymax = (maxY - rayStart.y) / r.dir.y;
-
-		if (tymin > tymax) swap(tymin, tymax);
-
-		if ((tmin > tymax) || (tymin > tmax))
-			return false;
-
-		if (tymin > tmin)
-			tmin = tymin;
-
-		if (tymax < tmax)
-			tmax = tymax;
-
-		float tzmin = (min.z - r.orig.z) / r.dir.z;
-		float tzmax = (max.z - r.orig.z) / r.dir.z;
-
-		if (tzmin > tzmax) swap(tzmin, tzmax);
-
-		if ((tmin > tzmax) || (tzmin > tmax))
-			return false;
-
-		if (tzmin > tmin)
-			tmin = tzmin;
-
-		if (tzmax < tmax)
-			tmax = tzmax;
-
-		return true;
-
-	}
+	
 
 	bool isWithinBox(glm::vec3 point)
 	{
@@ -131,6 +94,46 @@ public:
 	vector<glm::vec3> points;
 
 	float maxX, maxY, maxZ, minX, minY, minZ;
+
+
+	bool rayIntersects(glm::vec3 rayStart, glm::vec3 rayDirection)
+	{
+		float tmin = (minX - rayStart.x) / rayDirection.x;
+		float tmax = (maxX - rayStart.x) / rayDirection.x;
+
+		if (tmin > tmax) swap(tmin, tmax);
+
+		float tymin = (minY - rayStart.y) / rayDirection.y;
+		float tymax = (maxY - rayStart.y) / rayDirection.y;
+
+		if (tymin > tymax) swap(tymin, tymax);
+
+		if ((tmin > tymax) || (tymin > tmax))
+			return false;
+
+		if (tymin > tmin)
+			tmin = tymin;
+
+		if (tymax < tmax)
+			tmax = tymax;
+
+		float tzmin = (minZ - rayStart.z) / rayDirection.z;
+		float tzmax = (maxZ - rayStart.z) / rayDirection.z;
+
+		if (tzmin > tzmax) swap(tzmin, tzmax);
+
+		if ((tmin > tzmax) || (tzmin > tmax))
+			return false;
+
+		if (tzmin > tmin)
+			tmin = tzmin;
+
+		if (tzmax < tmax)
+			tmax = tzmax;
+
+		return true;
+
+	}
 
 	BoundingBox()
 	{
