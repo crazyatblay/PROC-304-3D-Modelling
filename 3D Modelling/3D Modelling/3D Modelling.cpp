@@ -11,13 +11,16 @@
 #define GL_GLEXT_PROTOTYPES
 #endif
 #endif
+#include "Conversion.h"
+#include "ShaderLoad.h"
+#include "Model.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+//#include <stdlib.h>
+//#include <stdio.h>
 
-#include "GL/glew.h"
-#include "GL/freeglut.h"
-#include "GLFW/glfw3.h"
+//#include "GL/glew.h"
+//#include "GL/freeglut.h"
+//#include "GLFW/glfw3.h"
 
 
 //#include "lib/GL/glut.h" should be able to remove this folder and glut ofolder in lib?
@@ -31,9 +34,7 @@
 #include <vector>
 #include <iostream>
 
-#include "Conversion.h"
-#include "ShaderLoad.h"
-#include "Model.cpp"
+
 using namespace std;
 using namespace Assimp;
 using namespace nanogui;
@@ -148,7 +149,32 @@ void LoadModel()
 	{
 		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
 	}
-	Model newModel(glmVerticies, indicies);
+
+	vector<float> x, y, z;
+
+	for (int i = 0; i < glmVerticies.size(); i++)
+	{
+		x.push_back(glmVerticies[i].x);
+		y.push_back(glmVerticies[i].y);
+		z.push_back(glmVerticies[i].z);
+	}
+
+	int maxX = max_element(x.begin(), x.end()) - x.begin();
+	int minX = min_element(x.begin(), x.end()) - x.begin();
+
+	int maxY = max_element(y.begin(), y.end()) - y.begin();
+	int minY = min_element(y.begin(), y.end()) - y.begin();
+
+	int maxZ = max_element(z.begin(), z.end()) - z.begin();
+	int minZ = min_element(z.begin(), z.end()) - z.begin();
+
+
+	//check if position lies at max
+
+	glm::vec3 pointMax(x[maxX], y[maxY], z[maxZ]);
+	glm::vec3 pointMin(x[minX], y[minY], z[minZ]);
+
+	Model newModel(glmVerticies, indicies, pointMax, pointMin);
 	models.push_back(newModel);
 	indicies.clear();
 	glmVerticies.clear();
@@ -405,7 +431,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		width = height = 0;
 
 		glfwGetWindowSize(window, &width, &height);
-		glfwGetCursorPos(window, &localXPos, &localYPos);
+		glfwGetCursorPos(window, &localXPos, &localYPos);		
 
 #pragma region
 		float x = (2.0f * localXPos) / width - 1.0f;
@@ -444,14 +470,24 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 #pragma endregion
 
+		vec3 screenPos(worldX, worldY, 0.0f);
+		vec3 dir(0, 0, -1.0f);
+		//vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
+		Ray ray(screenPos, dir);
+
 		int intersectModel = -1;
 		for (int i = 0; i < models.size(); i++)
 		{
-			if (models[i].boundBox.rayIntersects(nearPoint, direction))
+			float t;
+			//raypicking needs to be redone, should be able to just check if its in bounds now.
+			//also box need to rotate with model
+			//models[i].boundBox.rayIntersects(nearPoint, direction)
+			if (models[i].box->intersect(ray, t))
 			{
 				intersectModel = i;
 				break;
 			}
+			printf("%f",t);
 		}
 
 		if (intersectModel != -1)

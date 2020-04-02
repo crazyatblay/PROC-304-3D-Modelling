@@ -31,84 +31,82 @@
 #include "lib/glm/glm.hpp"
 #include <cstdlib>
 #include <random>
+#include "raybox.h"
 
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_real_distribution<> dis(0, 1);
 
-class Ray
+glm::vec3 orig, dir; // ray orig and dir
+glm::vec3 invdir;
+int sign[3];
+
+
+Ray::Ray(const glm::vec3 orig, const glm::vec3 dir) : orig(orig), dir(dir)
 {
-public:
-    Ray(const glm::vec3 orig, const glm::vec3 dir) : orig(orig), dir(dir)
-    {
 
-        invdir = glm::vec3(1 / dir.x,1/dir.y,1/dir.z);
-        sign[0] = (invdir.x < 0);
-        sign[1] = (invdir.y < 0);
-        sign[2] = (invdir.z < 0);
-    }
-    glm::vec3 orig, dir; // ray orig and dir
-    glm::vec3 invdir;
-    int sign[3];
-};
-
-class AABBox
-{
-public:
-    AABBox(const glm::vec3 b0, const glm::vec3 b1) { bounds[0] = b0, bounds[1] = b1; }
-    bool intersect(const Ray& r, float& t) const
-    {
-        float tmin, tmax, tymin, tymax, tzmin, tzmax;
-
-        tmin = (bounds[r.sign[0]].x - r.orig.x) * r.invdir.x;
-        tmax = (bounds[1 - r.sign[0]].x - r.orig.x) * r.invdir.x;
-        tymin = (bounds[r.sign[1]].y - r.orig.y) * r.invdir.y;
-        tymax = (bounds[1 - r.sign[1]].y - r.orig.y) * r.invdir.y;
-
-        if ((tmin > tymax) || (tymin > tmax))
-            return false;
-
-        if (tymin > tmin)
-            tmin = tymin;
-        if (tymax < tmax)
-            tmax = tymax;
-
-        tzmin = (bounds[r.sign[2]].z - r.orig.z) * r.invdir.z;
-        tzmax = (bounds[1 - r.sign[2]].z - r.orig.z) * r.invdir.z;
-
-        if ((tmin > tzmax) || (tzmin > tmax))
-            return false;
-
-        if (tzmin > tmin)
-            tmin = tzmin;
-        if (tzmax < tmax)
-            tmax = tzmax;
-
-        t = tmin;
-
-        if (t < 0) {
-            t = tmax;
-            if (t < 0) return false;
-        }
-
-        return true;
-    }
-    glm::vec3 bounds[2];
-};
-
-int main(int argc, char** argv)
-{
-    AABBox box(glm::vec3(-1), glm::vec3(1));
-    gen.seed(0);
-    for (uint32_t i = 0; i < 16; ++i) {
-        glm::vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
-        normalize(randDir);
-        Ray ray(glm::vec3(0), randDir);
-        float t;
-        if (box.intersect(ray, t)) {
-            glm::vec3 Phit = ray.orig + ray.dir * t;
-            //std::cerr << ray.orig << " " << Phit << std::endl;
-        }
-    }
-    return 0;
+	invdir = glm::vec3(1 / dir.x, 1 / dir.y, 1 / dir.z);
+	sign[0] = (invdir.x < 0);
+	sign[1] = (invdir.y < 0);
+	sign[2] = (invdir.z < 0);
 }
+
+
+glm::vec3 bounds[2];
+AABBox::AABBox(const glm::vec3 b0, const glm::vec3 b1) { bounds[0] = b0, bounds[1] = b1; }
+
+bool AABBox::intersect(const Ray& r, float& t) const
+{
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+	tmin = (bounds[r.sign[0]].x - r.orig.x) * r.invdir.x;
+	tmax = (bounds[1 - r.sign[0]].x - r.orig.x) * r.invdir.x;
+	tymin = (bounds[r.sign[1]].y - r.orig.y) * r.invdir.y;
+	tymax = (bounds[1 - r.sign[1]].y - r.orig.y) * r.invdir.y;
+
+	if ((tmin > tymax) || (tymin > tmax))
+		return false;
+
+	if (tymin > tmin)
+		tmin = tymin;
+	if (tymax < tmax)
+		tmax = tymax;
+
+	tzmin = (bounds[r.sign[2]].z - r.orig.z) * r.invdir.z;
+	tzmax = (bounds[1 - r.sign[2]].z - r.orig.z) * r.invdir.z;
+
+	if ((tmin > tzmax) || (tzmin > tmax))
+		return false;
+
+	if (tzmin > tmin)
+		tmin = tzmin;
+	if (tzmax < tmax)
+		tmax = tzmax;
+
+	t = tmin;
+
+	if (t < 0) {
+		t = tmax;
+		if (t < 0) return false;
+	}
+
+	return true;
+}
+
+//Example code
+//int main(int argc, char** argv)
+//{
+//    AABBox box(glm::vec3(-1), glm::vec3(1));
+//    gen.seed(0);
+//    for (uint32_t i = 0; i < 16; ++i) {
+//        glm::vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
+//        normalize(randDir);
+//        Ray ray(glm::vec3(0), randDir);
+//        float t;
+//        if (box.intersect(ray, t)) {
+//            glm::vec3 Phit = ray.orig + ray.dir * t;
+//            //std::cerr << ray.orig << " " << Phit << std::endl;
+//        }
+//    }
+//    return 0;
+//}

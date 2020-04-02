@@ -178,6 +178,7 @@ xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)"
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="Conversion.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="raybox.cpp" />
     <ClCompile Include="ShaderLoad.cpp" />
     <ClCompile Include="TestApp.cpp" />
   </ItemGroup>
@@ -186,6 +187,8 @@ xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)"
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Conversion.h" />
+    <ClInclude Include="Model.h" />
+    <ClInclude Include="raybox.h" />
     <ClInclude Include="ShaderLoad.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
