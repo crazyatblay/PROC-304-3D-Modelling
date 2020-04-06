@@ -53,46 +53,59 @@ Ray::Ray(const glm::vec3 orig, const glm::vec3 dir) : orig(orig), dir(dir)
 
 
 glm::vec3 bounds[2];
+//max,min
 AABBox::AABBox(const glm::vec3 b0, const glm::vec3 b1) { bounds[0] = b0, bounds[1] = b1; }
 
-bool AABBox::intersect(const Ray& r, float& t) const
+bool AABBox::ContainsPoint(glm::vec3 point)
 {
-	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+	if (((point.x < bounds[0].x) && (point.y < bounds[0].y) && (point.z < bounds[0].z)) &&
+		(point.x > bounds[1].x) && (point.y > bounds[1].y) && (point.z > bounds[1].z))
+	{
+		return true;
+	}
+	return false;
+}
 
-	tmin = (bounds[r.sign[0]].x - r.orig.x) * r.invdir.x;
-	tmax = (bounds[1 - r.sign[0]].x - r.orig.x) * r.invdir.x;
-	tymin = (bounds[r.sign[1]].y - r.orig.y) * r.invdir.y;
-	tymax = (bounds[1 - r.sign[1]].y - r.orig.y) * r.invdir.y;
+bool AABBox::intersect(const Ray& r)
+{
+
+	float tmin = (bounds[0].x - r.orig.x) / r.dir.x;
+	float tmax = (bounds[1].x - r.orig.x) / r.dir.x;
+
+	if (tmin > tmax) std::swap(tmin, tmax);
+
+	float tymin = (bounds[0].y - r.orig.y) / r.dir.y;
+	float tymax = (bounds[1].y - r.orig.y) / r.dir.y;
+
+	if (tymin > tymax) std::swap(tymin, tymax);
 
 	if ((tmin > tymax) || (tymin > tmax))
 		return false;
 
 	if (tymin > tmin)
 		tmin = tymin;
+
 	if (tymax < tmax)
 		tmax = tymax;
 
-	tzmin = (bounds[r.sign[2]].z - r.orig.z) * r.invdir.z;
-	tzmax = (bounds[1 - r.sign[2]].z - r.orig.z) * r.invdir.z;
+	float tzmin = (bounds[0].z - r.orig.z) / r.dir.z;
+	float tzmax = (bounds[1].z - r.orig.z) / r.dir.z;
+
+	if (tzmin > tzmax) std::swap(tzmin, tzmax);
 
 	if ((tmin > tzmax) || (tzmin > tmax))
 		return false;
 
 	if (tzmin > tmin)
 		tmin = tzmin;
+
 	if (tzmax < tmax)
 		tmax = tzmax;
 
-	t = tmin;
-
-	if (t < 0) {
-		t = tmax;
-		if (t < 0) return false;
-	}
-
 	return true;
-}
 
+
+}
 //Example code
 //int main(int argc, char** argv)
 //{

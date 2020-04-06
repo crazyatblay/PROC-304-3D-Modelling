@@ -423,6 +423,7 @@ void saveSetUp()
 
 void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 {
+	//need to seperate actions, only on press
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
 		double localXPos, localYPos;
@@ -431,21 +432,12 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		width = height = 0;
 
 		glfwGetWindowSize(window, &width, &height);
-		glfwGetCursorPos(window, &localXPos, &localYPos);		
+		glfwGetCursorPos(window, &localXPos, &localYPos);
 
 #pragma region
 		float x = (2.0f * localXPos) / width - 1.0f;
 		float y = 1.0f - (2.0f * localYPos) / height;
-		float z = 1.0f;
-
-		vec4 ray_clip(x, y, -1.0, 1.0);
-		vec4 ray_eye = inverse(projection) * ray_clip;
-		ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
-		vec3 ray_wor = (inverse(view) * ray_eye);
-		ray_wor = normalize(ray_wor);
-
-		vec3 nearPoint(x, y, z);
-		vec3 farPoint(x, y, -1.0f);
+		float z = 1.0f;		
 
 		GLint viewport[4]; //var to hold the viewport info
 		GLdouble modelview[16]; //var to hold the modelview info
@@ -462,15 +454,21 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		winZ = -100;
 
 		//get the world coordinates from the screen coordinates
-		gluUnProject(winX, winY, winZ, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-		vec3 worldPos(worldX, worldY, worldZ);
-		vec3 direction = worldPos - nearPoint;
-		direction = normalize(direction);
+		gluUnProject(x, y, z, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+		vec3 worldPos(worldX, worldY, worldZ);		
 
+
+
+		//GLdouble pos3D_x, pos3D_y, pos3D_z;// arrays to hold matrix informationGL
+		//double model_view[16];glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
+		//GLdouble projection[16];glGetDoublev(GL_PROJECTION_MATRIX, projection);
+		//GLint viewport[4];glGetIntegerv(GL_VIEWPORT, viewport);
+		//								   // get 3D coordinates based on window coordinates
+		//gluUnProject(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.01,	model_view, projection, viewport,	&pos3D_x, &pos3D_y, &pos3D_z);
 
 #pragma endregion
 
-		vec3 screenPos(worldX, worldY, 0.0f);
+		vec3 screenPos(x, y, 0.0f);
 		vec3 dir(0, 0, -1.0f);
 		//vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
 		Ray ray(screenPos, dir);
@@ -478,18 +476,19 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		int intersectModel = -1;
 		for (int i = 0; i < models.size(); i++)
 		{
-			float t;
+
 			//raypicking needs to be redone, should be able to just check if its in bounds now.
 			//also box need to rotate with model
 			//models[i].boundBox.rayIntersects(nearPoint, direction)
-			if (models[i].box->intersect(ray, t))
+			//GLUnproject getting contant point regalress of position
+			if (models[i].box->intersect(ray))
 			{
 				intersectModel = i;
 				break;
 			}
-			printf("%f",t);
 		}
 
+		vec3 nearPoint(x, y, z);
 		if (intersectModel != -1)
 		{
 			int closest = 0;

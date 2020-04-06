@@ -22,5 +22,6 @@ class AABBox
 public:
 	glm::vec3 bounds[2];
 	AABBox(const glm::vec3 b0, const glm::vec3 b1);
-	bool intersect(const Ray& r, float& t) const;
+	bool intersect(const Ray& r);
+	bool ContainsPoint(glm::vec3 point);
 };
