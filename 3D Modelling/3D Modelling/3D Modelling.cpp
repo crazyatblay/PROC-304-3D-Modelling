@@ -9,6 +9,8 @@
 #define GLFW_INCLUDE_GLCOREARB
 #else
 #define GL_GLEXT_PROTOTYPES
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
 #endif
 #endif
 #include "Conversion.h"
@@ -20,7 +22,8 @@
 
 //#include "GL/glew.h"
 //#include "GL/freeglut.h"
-//#include "GLFW/glfw3.h"
+#include "GLFW/glfw3.h"
+#include "GLFW/glfw3native.h"
 
 
 //#include "lib/GL/glut.h" should be able to remove this folder and glut ofolder in lib?
@@ -30,14 +33,13 @@
 #include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <nanogui/nanogui.h>
+//#include "imgui.h"
 #include <vector>
 #include <iostream>
 
 
 using namespace std;
 using namespace Assimp;
-using namespace nanogui;
 
 /*given in blender:
 dae=0
@@ -82,8 +84,6 @@ aiMatrix4x4 matrix;
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
 double xPos, yPos;
 bool leftPress;
-
-Screen* screenCurrent = nullptr;
 
 
 #define BUFFER_OFFSET(a)((void*)(a))
@@ -437,7 +437,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 #pragma region
 		float x = (2.0f * localXPos) / width - 1.0f;
 		float y = 1.0f - (2.0f * localYPos) / height;
-		float z = 1.0f;		
+		float z = 1.0f;
 
 		GLint viewport[4]; //var to hold the viewport info
 		GLdouble modelview[16]; //var to hold the modelview info
@@ -455,7 +455,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 		//get the world coordinates from the screen coordinates
 		gluUnProject(x, y, z, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-		vec3 worldPos(worldX, worldY, worldZ);		
+		vec3 worldPos(worldX, worldY, worldZ);
 
 
 
@@ -504,7 +504,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			models[intersectModel].points[closest] += vec3(1, 1, 1);
 		}
 
-		if (action == GLFW_PRESS)
+		if (action == GLFW_PRESS && intersectModel == -1)
 		{
 			leftPress = true;
 		}

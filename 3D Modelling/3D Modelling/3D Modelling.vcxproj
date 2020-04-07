@@ -177,16 +177,26 @@ xcopy /y "$(ProjDir)lib\nano\lib\nanogui.dll" "$(OutDir)"
     <ClCompile Include="3D Modelling.cpp" />
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="Conversion.cpp" />
+    <ClCompile Include="imgui.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_opengl3.cpp" />
+    <ClCompile Include="imgui_impl_win32.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="raybox.cpp" />
     <ClCompile Include="ShaderLoad.cpp" />
-    <ClCompile Include="TestApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Conversion.h" />
+    <ClInclude Include="imconfig.h" />
+    <ClInclude Include="imgui.h" />
+    <ClInclude Include="imgui_impl_glfw.h" />
+    <ClInclude Include="imgui_impl_opengl3.h" />
+    <ClInclude Include="imgui_impl_win32.h" />
+    <ClInclude Include="imgui_internal.h" />
+    <ClInclude Include="imstb_textedit.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="raybox.h" />
     <ClInclude Include="ShaderLoad.h" />
