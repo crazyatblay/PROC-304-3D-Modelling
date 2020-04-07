@@ -7,7 +7,7 @@
 #ifndef __LOAD_SHADERS_H__
 #define __LOAD_SHADERS_H__
 
-#include <GL/glew.h>
+#include "lib/GLEW/glew.h"
 #include "lib/glm/glm.hpp"
 
 #ifdef __cplusplus

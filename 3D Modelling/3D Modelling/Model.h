@@ -1,8 +1,7 @@
 #pragma once
 #include <vector>
 #include "raybox.h"
-#include <GL\glew.h>
-
+#include "lib/GLEW/glew.h"	
 class Model {
 
 public:

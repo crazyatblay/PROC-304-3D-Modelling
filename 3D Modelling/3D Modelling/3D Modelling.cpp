@@ -20,20 +20,20 @@
 //#include <stdlib.h>
 //#include <stdio.h>
 
-//#include "GL/glew.h"
+#include "lib/GLEW/glew.h"
 //#include "GL/freeglut.h"
-#include "GLFW/glfw3.h"
-#include "GLFW/glfw3native.h"
+#include "lib/GLFW/glfw3.h"
+#include "lib/GLFW/glfw3native.h"
 
 
 //#include "lib/GL/glut.h" should be able to remove this folder and glut ofolder in lib?
-#include "GL/glut.h"
+#include "lib/GL/glut.h"
 #include "lib/glm/glm.hpp"
 #include <assimp/cimport.h>
 #include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-//#include "imgui.h"
+#include "imgui.h"
 #include <vector>
 #include <iostream>
 
@@ -145,14 +145,14 @@ void LoadModel()
 
 	vector<GLuint> indicies = parseFaces(facesList);
 
-	for (int i = 0; i < verticiesList.size(); i++)
+	for (int i = 0; i < (int)verticiesList.size(); i++)
 	{
 		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
 	}
 
 	vector<float> x, y, z;
 
-	for (int i = 0; i < glmVerticies.size(); i++)
+	for (int i = 0; i < (int)glmVerticies.size(); i++)
 	{
 		x.push_back(glmVerticies[i].x);
 		y.push_back(glmVerticies[i].y);
@@ -203,15 +203,15 @@ void ParseModels()
 
 	vector<vec3> finalPoints;
 
-	for (int j = 0; j < models.size(); j++)
+	for (int j = 0; j < (int)models.size(); j++)
 	{
-		for (int i = 0; i < models[j].indicies.size(); i++)
+		for (int i = 0; i < (int)models[j].indicies.size(); i++)
 		{
 			finalPoints.push_back(models[j].points[models[j].indicies[i]]);
 		}
 	}
 
-	NumVertices = finalPoints.size();
+	NumVertices = (GLuint)finalPoints.size();
 
 	glGenBuffers(NumBuffers, Buffers);
 
@@ -474,7 +474,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		Ray ray(screenPos, dir);
 
 		int intersectModel = -1;
-		for (int i = 0; i < models.size(); i++)
+		for (int i = 0; i < (int)models.size(); i++)
 		{
 
 			//raypicking needs to be redone, should be able to just check if its in bounds now.
@@ -492,7 +492,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		if (intersectModel != -1)
 		{
 			int closest = 0;
-			for (int i = 1; i < models[intersectModel].points.size(); i++)
+			for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 			{
 				if (distance(nearPoint, models[intersectModel].points[i]) < distance(nearPoint, models[intersectModel].points[closest]))
 				{

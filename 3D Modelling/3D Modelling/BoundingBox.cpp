@@ -1,4 +1,4 @@
-#include <vector>;
+#include <vector>
 #include "lib/glm/ext/vector_float3.hpp"
 #include <algorithm>
 
@@ -77,7 +77,7 @@ private:
 
 	bool checkUniuque(vector<float> copy, float value)
 	{
-		int size = copy.size();
+		int size = (int)copy.size();
 		copy.erase(remove(copy.begin(), copy.end(), value), copy.end());
 		if (copy.size() + 1 == size)
 		{
@@ -151,14 +151,14 @@ public:
 			z.push_back(pointsInsert[i].z);
 		}
 
-		int maxX = max_element(x.begin(), x.end()) - x.begin();
-		int minX = min_element(x.begin(), x.end()) - x.begin();
+		int maxX = (int)(max_element(x.begin(), x.end()) - x.begin());
+		int minX = (int)(min_element(x.begin(), x.end()) - x.begin());
 
-		int minY = max_element(y.begin(), y.end()) - y.begin();
-		int maxY = min_element(y.begin(), y.end()) - y.begin();
+		int minY = (int)(max_element(y.begin(), y.end()) - y.begin());
+		int maxY = (int)(min_element(y.begin(), y.end()) - y.begin());
 
-		int maxZ = max_element(z.begin(), z.end()) - z.begin();
-		int minZ = min_element(z.begin(), z.end()) - z.begin();
+		int maxZ = (int)(max_element(z.begin(), z.end()) - z.begin());
+		int minZ = (int)(min_element(z.begin(), z.end()) - z.begin());
 
 
 		//check if position lies at max

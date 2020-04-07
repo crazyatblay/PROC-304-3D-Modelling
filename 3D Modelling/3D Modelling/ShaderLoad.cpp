@@ -1,6 +1,6 @@
 #include <cstdlib>
 #include <iostream>
-#include "GL/glew.h"
+#include "lib/GLEW/glew.h"
 #include "ShaderLoad.h"
 #ifdef __cplusplus 
 extern "C" {
