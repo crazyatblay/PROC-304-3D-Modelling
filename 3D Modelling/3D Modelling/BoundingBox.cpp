@@ -171,13 +171,13 @@ public:
 				for (int k = 0; k < 2; k++)
 				{
 					points.push_back(point);
-					point.x = maxX;
+					point.x = (float)maxX;
 				}
-				point.y = minY;
-				point.x = minX;
+				point.y = (float)minY;
+				point.x = (float)minX;
 			}
-			point.y = maxY;
-			point.z = minZ;
+			point.y = (float)maxY;
+			point.z = (float)minZ;
 		}
 		UpdateMaxMin();
 	}

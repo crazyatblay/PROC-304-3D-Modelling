@@ -70,23 +70,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\include;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -96,12 +96,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -118,12 +118,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -142,7 +142,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -151,7 +151,7 @@
       <OptimizeReferences>
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -170,7 +170,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -179,7 +179,7 @@
       <OptimizeReferences>
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -193,9 +193,11 @@
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="Conversion.cpp" />
     <ClCompile Include="imgui.cpp" />
+    <ClCompile Include="imgui_draw.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="imgui_impl_win32.cpp" />
+    <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="raybox.cpp" />
     <ClCompile Include="ShaderLoad.cpp" />
@@ -208,7 +210,9 @@
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_win32.h" />
     <ClInclude Include="imgui_internal.h" />
+    <ClInclude Include="imstb_rectpack.h" />
     <ClInclude Include="imstb_textedit.h" />
+    <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="raybox.h" />
     <ClInclude Include="ShaderLoad.h" />
