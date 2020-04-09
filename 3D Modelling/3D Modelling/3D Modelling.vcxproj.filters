@@ -54,6 +54,9 @@
     <ClCompile Include="imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="imgui_stdlib.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Conversion.h">
@@ -93,6 +96,9 @@
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="imstb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_stdlib.h">
       <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>

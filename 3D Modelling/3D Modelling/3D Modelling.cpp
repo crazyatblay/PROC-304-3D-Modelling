@@ -2,7 +2,7 @@
 #if defined(NANOGUI_SHARED) && !defined(GLAD_GLAPI_EXPORT)
 #define GLAD_GLAPI_EXPORT
 #endif
-
+#prgama message("ProjDir == " ProjDir)
 #include <glad/glad.h>
 #else
 #if defined(__APPLE__)
@@ -34,6 +34,9 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_stdlib.h"
 #include <vector>
 #include <iostream>
 
@@ -45,9 +48,9 @@ using namespace Assimp;
 dae=0
 abc=? Not going to support
 ply=7/8(inline/binary)
-stl=5/6(inline/binary)
+stl=5/6(inline/binary) not in current use
 fbx=17/18(inline/binary)
-glb/gltf=10/11(inline/binary)
+glb/gltf=10/11(inline/binary) not in current use
 obj=3/4
 .x3d=6
 */
@@ -84,7 +87,9 @@ aiMatrix4x4 matrix;
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
 double xPos, yPos;
 bool leftPress;
-
+string filePath;
+string fileName;
+ExportType currentType;
 
 #define BUFFER_OFFSET(a)((void*)(a))
 
@@ -103,10 +108,10 @@ vector<GLuint> parseFaces(vector<aiFace*> faces)
 	return ind;
 }
 
+
+
 void LoadModel()
 {
-
-
 	vector<aiMesh*> meshList;
 	vector<aiFace*> facesList;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
@@ -282,8 +287,17 @@ ExportType compareInput(string typeName)
 	return ExportType(-1);
 }
 
+void SplitInput(string input)
+{
+	string fileTypeLoc = input.substr(input.find_last_of('.') + 1, input.size() - input.find_last_of('.'));
+	string fileNameLoc = input.substr(input.find_last_of('\\') + 1, input.size() - input.find_last_of('.') + 2);
+	string filePathLoc = input.substr(0, input.length() - (fileTypeLoc.length() + fileNameLoc.length()) - 1);
+	fileName = fileNameLoc;
+	filePath = filePathLoc;
+	currentType = compareInput(fileTypeLoc);
+	}
 
-
+//fileName+path
 aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 {
 	/*Gets a list of all avaliable formats*/
@@ -307,8 +321,10 @@ aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 		return AI_FAILURE;
 	}
 
-	string output = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\";
-	output.append(FileName);
+	//hacky work around 
+	string output = FileName;
+	/*= "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\";
+	output.append(FileName);*/
 
 
 #pragma region 	
@@ -476,7 +492,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		int intersectModel = -1;
 		for (int i = 0; i < (int)models.size(); i++)
 		{
-
+			//bounding box is roughtly right height, X dimens seem off?
 			//raypicking needs to be redone, should be able to just check if its in bounds now.
 			//also box need to rotate with model
 			//models[i].boundBox.rayIntersects(nearPoint, direction)
@@ -544,6 +560,8 @@ void CheckEvents(GLFWwindow* window)
 	}
 }
 
+
+
 int main()
 {
 #pragma region 
@@ -554,14 +572,27 @@ int main()
 	window = glfwCreateWindow(1080, 720, "3D Model Loading", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	glewInit();
-	printf("Finished Initilisation");
 
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	const char* glsl_version = "#version 130";
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	printf("Finished Initilisation");
 #pragma endregion Setup
 
 #pragma region 
 	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
+	string dir = "";
+	//GetCurrentDirectory(dir.length(), &dir.c_str);
+	string fileName = "teapot";
+	ExportType type = ExportType(3);
 	printf("Input File Location:\n");
 	//	cin >> path;
+
+	SplitInput(path);
 
 	scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 	if (scene == nullptr)
@@ -587,18 +618,58 @@ int main()
 		//screenCurrent->drawContents();
 
 		display();
+
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		{
+
+			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+								 
+			ImGui::InputText("File Path", &filePath, IM_ARRAYSIZE(filePath.c_str()));
+			ImGui::InputText("File Name", &fileName, IM_ARRAYSIZE(fileName.c_str()));
+			ExportType type = ExportType(0);
+			const char* items[] = { "obj", "dae", "ply", "x3d", "fbx" };
+			static int item_current = 0;
+			ImGui::Combo("File Type", &item_current, items, IM_ARRAYSIZE(items));
+			if (ImGui::Button("Save"))
+			{
+				aiReturn status =saveScene(scene, filePath + fileName, compareInput(items[item_current]));
+				
+
+				if (status == AI_SUCCESS)
+				{
+					printf("\nSuccessfully saved\n");
+				}
+				else
+				{
+					printf("\nError saving.\n");
+				}
+			}
+				ImGui::End();
+		}
+		ImGui::Render();
+		int display_w, display_h;
+		glfwGetFramebufferSize(window, &display_w, &display_h);
+		glViewport(100, 100, display_w, display_h);
+		//glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+		//glClear(GL_COLOR_BUFFER_BIT);
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		//UpdateModel();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 		CheckEvents(window);
-
-
-		//displayFabric.UpdateFabric();
-		//UpdateModel();
 	}
 
 #pragma endregion Display
 
 #pragma region
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
 	aiReleaseImport(scene);
 
 	aiDetachAllLogStreams();
