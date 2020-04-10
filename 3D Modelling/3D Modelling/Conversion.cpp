@@ -15,6 +15,44 @@ aiVector3D Conversion::Vec3ConversionGLM(vec3 vecIn)
 	return aiVector3D(vecIn.x, vecIn.y, vecIn.z);
 }
 
+
+std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
+{
+	std::vector<GLuint> ind;
+	for (int i = 0; i < faces.size(); i++)
+	{		
+		for (unsigned int j = 0; j < faces[i]->mNumIndices; j++)
+		{
+			unsigned int locInd = faces[i]->mIndices[j];
+			ind.push_back(locInd);
+		}
+	}
+	return ind;
+}
+
+ std::vector<aiFace*> Conversion::parseGLMIndicies(std::vector<GLuint> indicies)
+{
+	std::vector<aiFace*> faces;
+	for (int i = 0; i < indicies.size(); i+=3)
+	{
+		/*std::vector<unsigned int> locInd;*/
+		//making faces up of three indicies
+		const unsigned int faceIndicies = 3;
+		aiFace* locFace= new aiFace();
+		unsigned int faceList[faceIndicies];
+		locFace->mNumIndices = faceIndicies;
+		
+		for (unsigned int j = 0; j < faceIndicies; j++)
+		{			
+			faceList[j] = indicies[i];
+		}		
+
+		locFace->mIndices = faceList;
+		faces.push_back(locFace);
+	}
+	return faces;
+}
+
 //assuming both are row major
 
 aiMatrix4x4 Conversion::MatrixConversionGLM(mat4 matIn)

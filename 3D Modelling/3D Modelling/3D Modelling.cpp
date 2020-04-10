@@ -13,6 +13,8 @@
 #define GLFW_EXPOSE_NATIVE_WGL
 #endif
 #endif
+
+#pragma region
 #include "Conversion.h"
 #include "ShaderLoad.h"
 #include "Model.h"
@@ -29,17 +31,20 @@
 //#include "lib/GL/glut.h" should be able to remove this folder and glut ofolder in lib?
 #include "lib/GL/glut.h"
 #include "lib/glm/glm.hpp"
+
 #include <assimp/cimport.h>
 #include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_stdlib.h"
+
 #include <vector>
 #include <iostream>
-
+#pragma endregion includes
 
 using namespace std;
 using namespace Assimp;
@@ -66,6 +71,7 @@ enum ExportType
 	fbx = 18,	//bin=17
 };
 
+#pragma region
 enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 1 };
 enum Buffer_IDs { ArrayBuffer, NumBuffers = 3 };
 enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2 };
@@ -87,28 +93,13 @@ aiMatrix4x4 matrix;
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
 double xPos, yPos;
 bool leftPress;
+bool update;
 string filePath;
 string fileName;
 ExportType currentType;
 
 #define BUFFER_OFFSET(a)((void*)(a))
-
-vector<GLuint> parseFaces(vector<aiFace*> faces)
-{
-	vector<GLuint> ind;
-	for (int i = 0; i < faces.size(); i++)
-	{
-		vector<unsigned int> locInd;
-		for (unsigned int j = 0; j < faces[i]->mNumIndices; j++)
-		{
-			unsigned int locInd = faces[i]->mIndices[j];
-			ind.push_back(locInd);
-		}
-	}
-	return ind;
-}
-
-
+#pragma endregion Vars
 
 void LoadModel()
 {
@@ -148,7 +139,7 @@ void LoadModel()
 
 	vector<glm::vec3> glmVerticies;
 
-	vector<GLuint> indicies = parseFaces(facesList);
+	vector<GLuint> indicies = Conversion::parseAIFaces(facesList);
 
 	for (int i = 0; i < (int)verticiesList.size(); i++)
 	{
@@ -173,7 +164,11 @@ void LoadModel()
 	int maxZ = max_element(z.begin(), z.end()) - z.begin();
 	int minZ = min_element(z.begin(), z.end()) - z.begin();
 
-
+	float height = y[maxY] - y[minY];
+	for (int i = 0; i < glmVerticies.size(); i++)
+	{
+		glmVerticies[i].y -= height / 2;
+	}
 	//check if position lies at max
 
 	glm::vec3 pointMax(x[maxX], y[maxY], z[maxZ]);
@@ -253,7 +248,6 @@ void ParseModels()
 	finalPoints.clear();
 }
 
-
 ExportType compareInput(string typeName)
 {
 	if (typeName == "dae")
@@ -292,13 +286,14 @@ void SplitInput(string input)
 	string fileTypeLoc = input.substr(input.find_last_of('.') + 1, input.size() - input.find_last_of('.'));
 	string fileNameLoc = input.substr(input.find_last_of('\\') + 1, input.size() - input.find_last_of('.') + 2);
 	string filePathLoc = input.substr(0, input.length() - (fileTypeLoc.length() + fileNameLoc.length()) - 1);
+
 	fileName = fileNameLoc;
 	filePath = filePathLoc;
 	currentType = compareInput(fileTypeLoc);
-	}
+}
 
 //fileName+path
-aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
+aiReturn saveScene(string FileName, ExportType ex)
 {
 	/*Gets a list of all avaliable formats*/
 	const char* desc;
@@ -311,22 +306,24 @@ aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 		printf("%d\n", i);
 	}*/
 
-	try {
+	try
+	{
 		desc = aiGetExportFormatDescription(ex)->description;
-		std::printf(desc);
+		//std::printf(desc);
 	}
 	catch (exception e)
 	{
-		std::printf("File Type unavaliable");
+		MessageBox(nullptr, TEXT("File Type Unavaliable"), TEXT("File Type unavaliable"), MB_OK);
+
 		return AI_FAILURE;
 	}
 
-	//hacky work around 
 	string output = FileName;
-	/*= "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\";
-	output.append(FileName);*/
-
-
+	if (output == "" || scene == NULL)
+	{
+		return aiReturn_FAILURE;
+	}
+	//change to break
 #pragma region 	
 	switch (ex)
 	{
@@ -335,7 +332,6 @@ aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 		break;
 	case 3:
 	case 4:
-	default:
 		output.append(".obj");
 		break;
 	case 5:
@@ -357,11 +353,56 @@ aiReturn saveScene(const aiScene* scene, string FileName, ExportType ex)
 	case 18:
 		output.append(".fbx");
 		break;
+	default:
+		return aiReturn_FAILURE;
 	}
-
 #pragma endregion Switch
 
-	return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
+	try
+	{//issues likely due to meshes/faces themselves rather than totality
+		vector<aiMesh*> meshList;
+		vector<aiFace*> facesList;
+
+		for (int i = 0; i < models.size(); i++)
+		{
+			meshList.push_back(new aiMesh());
+
+			facesList = Conversion::parseGLMIndicies(models[i].indicies);
+
+			for (int j = 0; j < models[i].points.size(); j++)
+			{
+				meshList[i]->mVertices = &Conversion::Vec3ConversionGLM(models[i].points[j]);
+			}
+			meshList[i]->mNumFaces = facesList.size();
+
+
+			/*for (int j = 0; j < facesList.size(); j++)
+			{
+				meshList[i]->mFaces[j] = *facesList[j];
+			}*/
+			meshList[i]->mFaces = facesList[0];
+		}
+
+		aiScene* exportScene = new aiScene();
+		exportScene->mFlags = scene->mFlags;
+		exportScene->mRootNode = scene->mRootNode;
+		exportScene->mNumMaterials = scene->mNumMaterials;
+		exportScene->mMaterials = scene->mMaterials;
+		exportScene->mNumMeshes = meshList.size();
+		exportScene->mMeshes = &meshList[0];
+
+		/*for (int i = 0; i < meshList.size(); i++)
+		{
+			exportScene->mMeshes[i] = meshList[i];
+		}*/
+
+		//rootnode?
+		return aiExportScene(exportScene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
+	}
+	catch (exception e)
+	{
+		return aiReturn_FAILURE;
+	}
 }
 
 void display()
@@ -379,11 +420,9 @@ void display()
 	model = glm::mat4(1.0f);
 	model = glm::scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
 
-
 	model = rotate(model, radians(xRotation), vec3(0.0f, 1.0f, .0f));
 	model = rotate(model, radians(yRotation), vec3(1.0f, 0.0f, 0.0f));
 	model = rotate(model, radians(zRotation), vec3(0.0f, 0.0f, 1.0f));
-
 
 	glm::mat4 mv = view * model;
 	projection = glm::perspective(45.0f, 4.0f / 3, 0.1f, 20.0f);
@@ -397,49 +436,8 @@ void display()
 	glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 }
 
-void saveSetUp()
-{
-	string fileName = "teapot";
-	ExportType type = ExportType(4);
-	bool validType = false;
-
-	printf("Enter File name:");
-	cin >> fileName;
-
-	printf("Enter Export file Type:");
-	while (validType != true)
-	{
-		string typeString;
-		printf("\nAvailable types:\ndae\nobj\nstl\nply\nglb\nx3d\nfbx\n");
-		cin >> typeString;
-
-		type = compareInput(typeString);
-
-		if (type != ExportType(-1))
-		{
-			validType = true;
-		}
-		else
-		{
-			printf("The file type specified either is not suupported by the system");
-		}
-	}
-
-	aiReturn status = saveScene(scene, fileName, type);
-
-	if (status == AI_SUCCESS)
-	{
-		printf("\nSuccessfully saved\n");
-	}
-	else
-	{
-		printf("\nError saving.\n");
-	}
-}
-
 void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 {
-	//need to seperate actions, only on press
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
 		double localXPos, localYPos;
@@ -518,6 +516,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			}
 
 			models[intersectModel].points[closest] += vec3(1, 1, 1);
+			update = true;
 		}
 
 		if (action == GLFW_PRESS && intersectModel == -1)
@@ -527,6 +526,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		else if (action == GLFW_RELEASE)
 		{
 			leftPress = false;
+			xPos = yPos = 0;
 		}
 	}
 }
@@ -535,7 +535,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_S && mods == GLFW_MOD_CONTROL)
 	{
-		saveSetUp();
+		//saveSetUp();
 	}
 }
 
@@ -560,10 +560,9 @@ void CheckEvents(GLFWwindow* window)
 	}
 }
 
-
-
 int main()
 {
+
 #pragma region 
 
 	glfwInit();
@@ -580,32 +579,11 @@ int main()
 	const char* glsl_version = "#version 130";
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
-	printf("Finished Initilisation");
+	printf("Finished Initilisation\n");
 #pragma endregion Setup
 
-#pragma region 
 	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
-	string dir = "";
-	//GetCurrentDirectory(dir.length(), &dir.c_str);
-	string fileName = "teapot";
-	ExportType type = ExportType(3);
-	printf("Input File Location:\n");
-	//	cin >> path;
-
 	SplitInput(path);
-
-	scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
-	if (scene == nullptr)
-	{
-		printf("Scene not loaded");
-	}
-	else
-	{
-		printf("Success");
-	}
-	LoadModel();
-	ParseModels();
-#pragma endregion Loading
 
 #pragma region
 
@@ -615,47 +593,80 @@ int main()
 
 	while (!glfwWindowShouldClose(window))
 	{
-		//screenCurrent->drawContents();
+		if (update)
+		{
+			ParseModels();
+			update = false;
+		}
 
 		display();
 
-
+#pragma region 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 		{
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-								 
-			ImGui::InputText("File Path", &filePath, IM_ARRAYSIZE(filePath.c_str()));
-			ImGui::InputText("File Name", &fileName, IM_ARRAYSIZE(fileName.c_str()));
-			ExportType type = ExportType(0);
-			const char* items[] = { "obj", "dae", "ply", "x3d", "fbx" };
-			static int item_current = 0;
-			ImGui::Combo("File Type", &item_current, items, IM_ARRAYSIZE(items));
-			if (ImGui::Button("Save"))
+			if (ImGui::BeginMainMenuBar())
 			{
-				aiReturn status =saveScene(scene, filePath + fileName, compareInput(items[item_current]));
-				
+				if (ImGui::BeginMenu("File"))
+				{
 
-				if (status == AI_SUCCESS)
-				{
-					printf("\nSuccessfully saved\n");
+					ImGui::InputText("File Path", &filePath, IM_ARRAYSIZE(filePath.c_str()));
+					ImGui::InputText("File Name", &fileName, IM_ARRAYSIZE(fileName.c_str()));
+					ExportType type = ExportType(0);
+					const char* items[] = { "obj", "dae", "ply", "x3d", "fbx" };
+					static int item_current = 0;
+					ImGui::Combo("File Type", &item_current, items, IM_ARRAYSIZE(items));
+
+					if (ImGui::MenuItem("Load"))
+					{
+						path = filePath + fileName + "." + items[item_current];
+						scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+						if (scene == nullptr)
+						{
+							printf("Scene not loaded");
+						}
+						else
+						{
+							printf("Success");
+						}
+						LoadModel();
+						ParseModels();
+					}
+
+					if (ImGui::MenuItem("Save"))
+					{
+						aiReturn status = saveScene(filePath + fileName, compareInput(items[item_current]));
+
+						if (status == AI_SUCCESS)
+						{
+							MessageBox(nullptr, TEXT("Saved"), TEXT("Successfully saved!"), MB_OK);
+						}
+						else
+						{
+							MessageBox(nullptr, TEXT("Saving Failure"), TEXT("Failed to save file."), MB_OK);
+						}
+					}
+
+					//ImGui::Separator();
+					//if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+					//if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+					//ImGui::Separator();
+					//if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+					//if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+					//if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+					ImGui::EndMenu();
 				}
-				else
-				{
-					printf("\nError saving.\n");
-				}
+				ImGui::EndMainMenuBar();
 			}
-				ImGui::End();
 		}
+
 		ImGui::Render();
 		int display_w, display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);
-		glViewport(100, 100, display_w, display_h);
-		//glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-		//glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(0, 0, display_w, display_h);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#pragma endregion Imgui Saving/Loading
 
 		//UpdateModel();
 		glfwSwapBuffers(window);
