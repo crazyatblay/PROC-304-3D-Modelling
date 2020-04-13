@@ -21,6 +21,8 @@
 
 //#include <stdlib.h>
 //#include <stdio.h>
+#include "Shobjidl.h"
+#include "atlcomcli.h"
 
 #include "lib/GLEW/glew.h"
 //#include "GL/freeglut.h"
@@ -283,9 +285,9 @@ ExportType compareInput(string typeName)
 
 void SplitInput(string input)
 {
-	string fileTypeLoc = input.substr(input.find_last_of('.') + 1, input.size() - input.find_last_of('.'));
-	string fileNameLoc = input.substr(input.find_last_of('\\') + 1, input.size() - input.find_last_of('.') + 2);
-	string filePathLoc = input.substr(0, input.length() - (fileTypeLoc.length() + fileNameLoc.length()) - 1);
+	string fileTypeLoc = input.substr(input.find_last_of('.') + 1, input.length() - input.find_last_of('.'));
+	string fileNameLoc = input.substr(input.find_last_of('\\')+1, ((input.length() - input.find_last_of('\\'))-fileTypeLoc.length())-2);
+	string filePathLoc = input.substr(0, input.length() - (input.length() - input.find_last_of('\\'))+1);
 
 	fileName = fileNameLoc;
 	filePath = filePathLoc;
@@ -309,7 +311,7 @@ aiReturn saveScene(string FileName, ExportType ex)
 	try
 	{
 		desc = aiGetExportFormatDescription(ex)->description;
-		//std::printf(desc);
+		std::printf(desc);
 	}
 	catch (exception e)
 	{
@@ -323,7 +325,7 @@ aiReturn saveScene(string FileName, ExportType ex)
 	{
 		return aiReturn_FAILURE;
 	}
-	//change to break
+
 #pragma region 	
 	switch (ex)
 	{
@@ -359,45 +361,36 @@ aiReturn saveScene(string FileName, ExportType ex)
 #pragma endregion Switch
 
 	try
-	{//issues likely due to meshes/faces themselves rather than totality
-		vector<aiMesh*> meshList;
-		vector<aiFace*> facesList;
+	{
+		vector<aiFace> facesList;
+		vector<aiVector3D> vecsList;
 
 		for (int i = 0; i < models.size(); i++)
 		{
-			meshList.push_back(new aiMesh());
-
 			facesList = Conversion::parseGLMIndicies(models[i].indicies);
 
 			for (int j = 0; j < models[i].points.size(); j++)
 			{
-				meshList[i]->mVertices = &Conversion::Vec3ConversionGLM(models[i].points[j]);
+				aiVector3D convert = Conversion::Vec3ConversionGLM(models[i].points[j]);
+				vecsList.push_back(convert);
 			}
-			meshList[i]->mNumFaces = facesList.size();
 
-
-			/*for (int j = 0; j < facesList.size(); j++)
+			for (int k = 0; k < vecsList.size(); k++)
 			{
-				meshList[i]->mFaces[j] = *facesList[j];
-			}*/
-			meshList[i]->mFaces = facesList[0];
+				scene->mMeshes[i]->mVertices[k] = vecsList[k];
+			}
+
+			for (int m = 0; m < facesList.size(); m++)
+			{
+				scene->mMeshes[i]->mFaces[m].mNumIndices = 3;
+				scene->mMeshes[i]->mFaces[m].mIndices = facesList[m].mIndices;
+			}
+			vecsList.clear();
+			//facesList.clear();doens't liek clearing faces? unsure why but whatever.
 		}
 
-		aiScene* exportScene = new aiScene();
-		exportScene->mFlags = scene->mFlags;
-		exportScene->mRootNode = scene->mRootNode;
-		exportScene->mNumMaterials = scene->mNumMaterials;
-		exportScene->mMaterials = scene->mMaterials;
-		exportScene->mNumMeshes = meshList.size();
-		exportScene->mMeshes = &meshList[0];
 
-		/*for (int i = 0; i < meshList.size(); i++)
-		{
-			exportScene->mMeshes[i] = meshList[i];
-		}*/
-
-		//rootnode?
-		return aiExportScene(exportScene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
+		return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 	}
 	catch (exception e)
 	{
@@ -582,7 +575,7 @@ int main()
 	printf("Finished Initilisation\n");
 #pragma endregion Setup
 
-	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\teapot.obj";
+	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\flat.obj";
 	SplitInput(path);
 
 #pragma region
@@ -620,23 +613,75 @@ int main()
 
 					if (ImGui::MenuItem("Load"))
 					{
+						models.clear();
+
 						path = filePath + fileName + "." + items[item_current];
 						scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 						if (scene == nullptr)
 						{
-							printf("Scene not loaded");
+							MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
 						}
 						else
 						{
 							printf("Success");
-						}
-						LoadModel();
-						ParseModels();
-					}
 
+							LoadModel();
+							ParseModels();
+						}
+
+					}
+					//using window, need to add all options to filter.
 					if (ImGui::MenuItem("Save"))
 					{
-						aiReturn status = saveScene(filePath + fileName, compareInput(items[item_current]));
+						aiReturn status;
+
+
+						IFileDialog* pfd = NULL;
+						HRESULT hr;
+						HWND hWnd = glfwGetWin32Window(window);
+						CComPtr<IFileSaveDialog> dlg;
+						COMDLG_FILTERSPEC aFileTypes[] = {
+							{ L"Object", L"*.obj" },
+							{ L"All files", L"*.*" }
+						};
+
+						hr = dlg.CoCreateInstance(__uuidof(FileSaveDialog));
+						if (FAILED(hr))
+						{
+							status = AI_FAILURE;
+						}
+						dlg->SetFileTypes(countof(aFileTypes), aFileTypes);
+						dlg->SetTitle(L"Save construct");
+						dlg->SetOkButtonLabel(L"Save ");
+						dlg->SetDefaultExtension(L".obj");
+
+						//taken from stackoverflow, might have problems?
+						wstring convert(fileName.begin(), fileName.end());
+						dlg->SetFileName(convert.c_str());
+
+						hr = dlg->Show(hWnd);
+
+						if (SUCCEEDED(hr))
+						{
+							CComPtr<IShellItem> pItem;
+							hr = dlg->GetResult(&pItem);
+							if (SUCCEEDED(hr))
+							{
+								LPOLESTR pwsz = NULL;
+
+								hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
+
+								if (SUCCEEDED(hr))
+								{
+									wchar_t* poleConv = pwsz;
+									wstring wCharConv(poleConv);
+									string wStringConv(wCharConv.begin(), wCharConv.end());
+									SplitInput(wStringConv);
+									status = saveScene(filePath + fileName, compareInput(items[item_current]));
+									MessageBox(nullptr, TEXT("Saved"), TEXT("TEST!"), MB_OK);
+								}
+							}
+						}
 
 						if (status == AI_SUCCESS)
 						{

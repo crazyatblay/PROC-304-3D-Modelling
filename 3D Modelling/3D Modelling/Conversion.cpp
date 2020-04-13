@@ -30,9 +30,9 @@ std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
 	return ind;
 }
 
- std::vector<aiFace*> Conversion::parseGLMIndicies(std::vector<GLuint> indicies)
+ std::vector<aiFace> Conversion::parseGLMIndicies(std::vector<GLuint> indicies)
 {
-	std::vector<aiFace*> faces;
+	std::vector<aiFace> faces;
 	for (int i = 0; i < indicies.size(); i+=3)
 	{
 		/*std::vector<unsigned int> locInd;*/
@@ -48,7 +48,7 @@ std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
 		}		
 
 		locFace->mIndices = faceList;
-		faces.push_back(locFace);
+		faces.push_back(*locFace);
 	}
 	return faces;
 }
