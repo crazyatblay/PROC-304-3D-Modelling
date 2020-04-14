@@ -9,4 +9,6 @@ public:
 	std::vector<glm::vec3> points;
 	std::vector<GLuint> indicies;
 	Model(std::vector<glm::vec3> input, std::vector<GLuint> ind, glm::vec3 max, glm::vec3 min);
+
+	void Rotate(glm::vec3 rotation);
 };

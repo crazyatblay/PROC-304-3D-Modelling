@@ -88,20 +88,60 @@ GLuint program;
 const aiScene* scene;
 vector<Model> models;
 
-glm::mat4 model;
-glm::mat4 view;
-glm::mat4 projection;
+mat4 model;
+mat4 view;
+mat4 projection;
+vec3 cameraPos;
 aiMatrix4x4 matrix;
+
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
+float scroll = 0.0f;
 double xPos, yPos;
 bool leftPress;
 bool update;
+bool interaction;
+
 string filePath;
 string fileName;
 ExportType currentType;
 
 #define BUFFER_OFFSET(a)((void*)(a))
 #pragma endregion Vars
+
+void getMinMax(vector<vec3> glmVerticies, vec3& Max, vec3& Min)
+{
+	vector<float> x, y, z;
+	for (int i = 0; i < (int)glmVerticies.size(); i++)
+	{
+		x.push_back(glmVerticies[i].x);
+		y.push_back(glmVerticies[i].y);
+		z.push_back(glmVerticies[i].z);
+	}
+
+	int maxX = max_element(x.begin(), x.end()) - x.begin();
+	int minX = min_element(x.begin(), x.end()) - x.begin();
+
+	int maxY = max_element(y.begin(), y.end()) - y.begin();
+	int minY = min_element(y.begin(), y.end()) - y.begin();
+
+	int maxZ = max_element(z.begin(), z.end()) - z.begin();
+	int minZ = min_element(z.begin(), z.end()) - z.begin();
+
+	float height = y[maxY] - y[minY];
+	for (int i = 0; i < glmVerticies.size(); i++)
+	{
+		glmVerticies[i].y -= height / 2;
+	}
+	//check if position lies at max
+
+	Max.x = x[maxX];// new vec3(x[maxX], y[maxY], z[maxZ]);//3.5
+	Max.y = y[maxY];//3.15
+	Max.z = z[maxZ];//2
+	//Min = new vec3(x[minX], y[minY], z[minZ]);
+	Min.x = x[minX];// new vec3(x[minX], y[minY], z[minZ]);//-3
+	Min.y = y[minY];//0
+	Min.z = z[minZ];//-2
+}
 
 void LoadModel()
 {
@@ -148,34 +188,16 @@ void LoadModel()
 		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
 	}
 
-	vector<float> x, y, z;
 
-	for (int i = 0; i < (int)glmVerticies.size(); i++)
-	{
-		x.push_back(glmVerticies[i].x);
-		y.push_back(glmVerticies[i].y);
-		z.push_back(glmVerticies[i].z);
-	}
-
-	int maxX = max_element(x.begin(), x.end()) - x.begin();
-	int minX = min_element(x.begin(), x.end()) - x.begin();
-
-	int maxY = max_element(y.begin(), y.end()) - y.begin();
-	int minY = min_element(y.begin(), y.end()) - y.begin();
-
-	int maxZ = max_element(z.begin(), z.end()) - z.begin();
-	int minZ = min_element(z.begin(), z.end()) - z.begin();
-
-	float height = y[maxY] - y[minY];
-	for (int i = 0; i < glmVerticies.size(); i++)
-	{
-		glmVerticies[i].y -= height / 2;
-	}
 	//check if position lies at max
 
-	glm::vec3 pointMax(x[maxX], y[maxY], z[maxZ]);
-	glm::vec3 pointMin(x[minX], y[minY], z[minZ]);
-
+	vec3 pointMin, pointMax;
+	getMinMax(glmVerticies, pointMin, pointMax);
+	//float height =   pointMin.y-pointMax.y;// y[maxY] - y[minY];
+	//for (int i = 0; i < glmVerticies.size(); i++)
+	//{
+	//	glmVerticies[i].y -= height / 2;
+	//}
 	Model newModel(glmVerticies, indicies, pointMax, pointMin);
 	models.push_back(newModel);
 	indicies.clear();
@@ -250,6 +272,41 @@ void ParseModels()
 	finalPoints.clear();
 }
 
+string compareOutput(ExportType type)
+{
+	switch (type)
+	{
+	case 0:
+		return(".dae");
+		break;
+	case 3:
+	case 4:
+		return(".obj");
+		break;
+	case 5:
+	case 6:
+		return(".stl");
+		break;
+	case 7:
+	case 8:
+		return(".ply");
+		break;
+	case 10:
+	case 11:
+		return(".glb");
+		break;
+	case 16:
+		return(".x3d");
+		break;
+	case 17:
+	case 18:
+		return(".fbx");
+		break;
+	default:
+		return ("");
+	}
+}
+
 ExportType compareInput(string typeName)
 {
 	if (typeName == "dae")
@@ -286,8 +343,8 @@ ExportType compareInput(string typeName)
 void SplitInput(string input)
 {
 	string fileTypeLoc = input.substr(input.find_last_of('.') + 1, input.length() - input.find_last_of('.'));
-	string fileNameLoc = input.substr(input.find_last_of('\\')+1, ((input.length() - input.find_last_of('\\'))-fileTypeLoc.length())-2);
-	string filePathLoc = input.substr(0, input.length() - (input.length() - input.find_last_of('\\'))+1);
+	string fileNameLoc = input.substr(input.find_last_of('\\') + 1, ((input.length() - input.find_last_of('\\')) - fileTypeLoc.length()) - 2);
+	string filePathLoc = input.substr(0, input.length() - (input.length() - input.find_last_of('\\')) + 1);
 
 	fileName = fileNameLoc;
 	filePath = filePathLoc;
@@ -326,8 +383,15 @@ aiReturn saveScene(string FileName, ExportType ex)
 		return aiReturn_FAILURE;
 	}
 
+	string fileType = compareOutput(ex);
+	if (fileType == "")
+	{
+		return AI_FAILURE;
+	}
+	output.append(compareOutput(ex));
+
 #pragma region 	
-	switch (ex)
+	/*switch (ex)
 	{
 	case 0:
 		output.append(".dae");
@@ -357,8 +421,8 @@ aiReturn saveScene(string FileName, ExportType ex)
 		break;
 	default:
 		return aiReturn_FAILURE;
-	}
-#pragma endregion Switch
+	}*/
+#pragma endregion Switch(MOVED TO COMPARE)
 
 	try
 	{
@@ -417,6 +481,18 @@ void display()
 	model = rotate(model, radians(yRotation), vec3(1.0f, 0.0f, 0.0f));
 	model = rotate(model, radians(zRotation), vec3(0.0f, 0.0f, 1.0f));
 
+	if (models.size() > 0)
+	{//need to iterate
+		getMinMax(models[0].points, models[0].box->bounds[0], models[0].box->bounds[1]);
+		models[0].box->bounds[0] = model * vec4(models[0].box->bounds[0], 1);
+		models[0].box->bounds[1] = model * vec4(models[0].box->bounds[1], 1);
+	}
+	view = glm::translate(view, glm::vec3(0.0f, 0.0f, (-4.0f * scroll)));
+	scroll = 0.0f;
+	/*view = lookAt(cameraPos,
+		vec3(0, 0, 0),
+		vec3(0, 1, 0));*/
+
 	glm::mat4 mv = view * model;
 	projection = glm::perspective(45.0f, 4.0f / 3, 0.1f, 20.0f);
 
@@ -431,6 +507,7 @@ void display()
 
 void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 {
+
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
 		double localXPos, localYPos;
@@ -440,89 +517,94 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 		glfwGetWindowSize(window, &width, &height);
 		glfwGetCursorPos(window, &localXPos, &localYPos);
-
+		if (interaction && localYPos > 17.5)
+		{
 #pragma region
-		float x = (2.0f * localXPos) / width - 1.0f;
-		float y = 1.0f - (2.0f * localYPos) / height;
-		float z = 1.0f;
+			float x = (2.0f * localXPos) / width - 1.0f;
+			float y = 1.0f - (2.0f * localYPos) / height;
+			float z = 1.0f;
 
-		GLint viewport[4]; //var to hold the viewport info
-		GLdouble modelview[16]; //var to hold the modelview info
-		GLdouble projection[16]; //var to hold the projection matrix info
-		GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
-		GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
+			GLint viewport[4]; //var to hold the viewport info
+			GLdouble modelview[16]; //var to hold the modelview info
+			GLdouble projection[16]; //var to hold the projection matrix info
+			GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
+			GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
 
-		glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
-		glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
-		glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+			glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+			glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
+			glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
 
-		winX = (float)x;
-		winY = (float)viewport[3] - (float)y;
-		winZ = -100;
+			winX = (float)x;
+			winY = (float)viewport[3] - (float)y;
+			winZ = -100;
 
-		//get the world coordinates from the screen coordinates
-		gluUnProject(x, y, z, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-		vec3 worldPos(worldX, worldY, worldZ);
+			//get the world coordinates from the screen coordinates
+			gluUnProject(x, y, z, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+			vec3 worldPos(worldX, worldY, worldZ);
 
 
 
-		//GLdouble pos3D_x, pos3D_y, pos3D_z;// arrays to hold matrix informationGL
-		//double model_view[16];glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
-		//GLdouble projection[16];glGetDoublev(GL_PROJECTION_MATRIX, projection);
-		//GLint viewport[4];glGetIntegerv(GL_VIEWPORT, viewport);
-		//								   // get 3D coordinates based on window coordinates
-		//gluUnProject(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.01,	model_view, projection, viewport,	&pos3D_x, &pos3D_y, &pos3D_z);
+			//GLdouble pos3D_x, pos3D_y, pos3D_z;// arrays to hold matrix informationGL
+			//double model_view[16];glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
+			//GLdouble projection[16];glGetDoublev(GL_PROJECTION_MATRIX, projection);
+			//GLint viewport[4];glGetIntegerv(GL_VIEWPORT, viewport);
+			//								   // get 3D coordinates based on window coordinates
+			//gluUnProject(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.01,	model_view, projection, viewport,	&pos3D_x, &pos3D_y, &pos3D_z);
 
 #pragma endregion
 
-		vec3 screenPos(x, y, 0.0f);
-		vec3 dir(0, 0, -1.0f);
-		//vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
-		Ray ray(screenPos, dir);
+			vec3 screenPos(x, y, 0.0f);
+			vec3 dir(0, 0, -1.0f);
+			//vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
+			Ray ray(screenPos, dir);
 
-		int intersectModel = -1;
-		for (int i = 0; i < (int)models.size(); i++)
-		{
-			//bounding box is roughtly right height, X dimens seem off?
-			//raypicking needs to be redone, should be able to just check if its in bounds now.
-			//also box need to rotate with model
-			//models[i].boundBox.rayIntersects(nearPoint, direction)
-			//GLUnproject getting contant point regalress of position
-			if (models[i].box->intersect(ray))
+			int intersectModel = -1;
+			for (int i = 0; i < (int)models.size(); i++)
 			{
-				intersectModel = i;
-				break;
-			}
-		}
-
-		vec3 nearPoint(x, y, z);
-		if (intersectModel != -1)
-		{
-			int closest = 0;
-			for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
-			{
-				if (distance(nearPoint, models[intersectModel].points[i]) < distance(nearPoint, models[intersectModel].points[closest]))
+				//bounding box is roughtly right height, X dimens seem off?
+				//raypicking needs to be redone, should be able to just check if its in bounds now.
+				//also box need to rotate with model
+				//models[i].boundBox.rayIntersects(nearPoint, direction)
+				//GLUnproject getting contant point regalress of position
+				if (models[i].box->intersect(ray))
 				{
-					closest = i;
+					intersectModel = i;
+					break;
+				}
+			}
+
+			vec3 nearPoint(x, y, z);
+			if (intersectModel != -1)
+			{
+				int closest = 0;
+				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
+				{
+					if (distance(nearPoint, models[intersectModel].points[i]) < distance(nearPoint, models[intersectModel].points[closest]))
+					{
+						closest = i;
+					}
+
 				}
 
+				models[intersectModel].points[closest] += vec3(model * vec4(1, 1, 1, 0));
+				update = true;
+				vec3 upper = models[intersectModel].box->bounds[0];
+				printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);
 			}
 
-			models[intersectModel].points[closest] += vec3(1, 1, 1);
-			update = true;
-		}
-
-		if (action == GLFW_PRESS && intersectModel == -1)
-		{
-			leftPress = true;
-		}
-		else if (action == GLFW_RELEASE)
-		{
-			leftPress = false;
-			xPos = yPos = 0;
+			if (action == GLFW_PRESS && intersectModel == -1)
+			{
+				leftPress = true;
+			}
+			else if (action == GLFW_RELEASE)
+			{
+				leftPress = false;
+				xPos = yPos = 0;
+			}
 		}
 	}
 }
+
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -532,6 +614,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	int total = xoffset + yoffset;
+	if (total > 0)
+	{
+		scroll -= 0.1f;
+	}
+	else if (total < 0)
+	{
+		scroll += 0.1f;
+	}
+}
 
 void CheckEvents(GLFWwindow* window)
 {
@@ -555,9 +649,8 @@ void CheckEvents(GLFWwindow* window)
 
 int main()
 {
-
 #pragma region 
-
+	cameraPos = vec3(0, 0, -1);
 	glfwInit();
 
 	GLFWwindow* window = nullptr;
@@ -573,15 +666,13 @@ int main()
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
 	printf("Finished Initilisation\n");
-#pragma endregion Setup
-
-	string path = "C:\\Users\\crazy\\OneDrive\\Documents\\Assimp\\flat.obj";
-	SplitInput(path);
+#pragma endregion Setup	
 
 #pragma region
 
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
 	glPolygonMode(GL_FRONT, GL_FILL);
 
 	while (!glfwWindowShouldClose(window))
@@ -601,40 +692,81 @@ int main()
 		{
 			if (ImGui::BeginMainMenuBar())
 			{
+				
 				if (ImGui::BeginMenu("File"))
 				{
+					interaction = false;
 
-					ImGui::InputText("File Path", &filePath, IM_ARRAYSIZE(filePath.c_str()));
-					ImGui::InputText("File Name", &fileName, IM_ARRAYSIZE(fileName.c_str()));
-					ExportType type = ExportType(0);
-					const char* items[] = { "obj", "dae", "ply", "x3d", "fbx" };
-					static int item_current = 0;
-					ImGui::Combo("File Type", &item_current, items, IM_ARRAYSIZE(items));
-
+					//using window, need to add all options to filter.
 					if (ImGui::MenuItem("Load"))
 					{
 						models.clear();
 
-						path = filePath + fileName + "." + items[item_current];
-						scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
-						if (scene == nullptr)
-						{
-							MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
-						}
-						else
-						{
-							printf("Success");
+						IFileDialog* pfd = NULL;
+						HRESULT hr;
+						HWND hWnd = glfwGetWin32Window(window);
+						CComPtr<IFileOpenDialog> dlg;
+						COMDLG_FILTERSPEC aFileTypes[] = {
+							{ L"Object", L"*.obj" },
+							{ L"All files", L"*.*" }
+						};
 
-							LoadModel();
-							ParseModels();
+						hr = dlg.CoCreateInstance(__uuidof(FileOpenDialog));
+						if (FAILED(hr))
+						{
+							//need to implement
+							//status = AI_FAILURE;
 						}
+						dlg->SetFileTypes(countof(aFileTypes), aFileTypes);
+						dlg->SetTitle(L"Load construct");
+						dlg->SetOkButtonLabel(L"Load ");
+						dlg->SetDefaultExtension(L".obj");
+						hr = dlg->Show(hWnd);
+
+						if (SUCCEEDED(hr))
+						{
+							CComPtr<IShellItem> pItem;
+							hr = dlg->GetResult(&pItem);
+							if (SUCCEEDED(hr))
+							{
+								LPOLESTR pwsz = NULL;
+
+								hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
+
+								if (SUCCEEDED(hr))
+								{
+									wchar_t* poleConv = pwsz;
+									wstring wCharConv(poleConv);
+									string wStringConv(wCharConv.begin(), wCharConv.end());
+									SplitInput(wStringConv);
+									string fileExt = compareOutput(currentType);
+									if (fileExt == "")
+									{
+										MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
+										break;
+									}
+									string path = filePath + fileName + fileExt;
+									scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+									if (scene == nullptr)
+									{
+										MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
+									}
+									else
+									{
+										LoadModel();
+										ParseModels();
+									}
+								}
+							}
+						}
+
+
+
 
 					}
-					//using window, need to add all options to filter.
 					if (ImGui::MenuItem("Save"))
 					{
-						aiReturn status;
-
+						aiReturn status = AI_FAILURE;
 
 						IFileDialog* pfd = NULL;
 						HRESULT hr;
@@ -677,8 +809,8 @@ int main()
 									wstring wCharConv(poleConv);
 									string wStringConv(wCharConv.begin(), wCharConv.end());
 									SplitInput(wStringConv);
-									status = saveScene(filePath + fileName, compareInput(items[item_current]));
-									MessageBox(nullptr, TEXT("Saved"), TEXT("TEST!"), MB_OK);
+
+									status = saveScene(filePath + fileName, currentType);
 								}
 							}
 						}
@@ -702,6 +834,11 @@ int main()
 					//if (ImGui::MenuItem("Paste", "CTRL+V")) {}
 					ImGui::EndMenu();
 				}
+				else
+				{
+					interaction = true;
+				}
+
 				ImGui::EndMainMenuBar();
 			}
 		}
