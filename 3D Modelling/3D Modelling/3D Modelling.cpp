@@ -95,7 +95,11 @@ vec3 cameraPos;
 aiMatrix4x4 matrix;
 
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
-float scroll = 0.0f;
+float scroll = 0.0f, culumScroll = 0.0f;
+
+int selectedModel = -1, selectedPoint = -1;
+vec3 movementStart;
+
 double xPos, yPos;
 bool leftPress;
 bool update;
@@ -507,22 +511,41 @@ void display()
 
 void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 {
+	int width, height;
+	double localXPos, localYPos;
+	//localXPos = localYPos = 0;
+	//width = height = 0;
+	glfwGetCursorPos(window, &localXPos, &localYPos);
+	glfwGetWindowSize(window, &width, &height);
+	float x = (2.0f * localXPos) / width - 1.0f;
+	float y = 1.0f - (2.0f * localYPos) / height;
+	float z = 1.0f;
+
+
+	if (selectedModel != -1 && selectedPoint != -1)
+	{
+
+		vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
+		vec4 movement = vec4(screenPos - movementStart, 0);
+		movement = view * movement;
+		models[selectedModel].points[selectedPoint] += vec3(model * movement);
+		movementStart = screenPos;
+		update = true;
+		vec3 printPoint(models[selectedModel].points[selectedPoint].x, models[selectedModel].points[selectedPoint].y, models[selectedModel].points[selectedPoint].z);
+		printf("\n%f,%f,%f\n",
+			printPoint.x,
+			printPoint.y,
+			printPoint.z);
+		/*vec3 upper = models[intersectModel].box->bounds[0];
+		printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);*/
+	}
 
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
-		double localXPos, localYPos;
-		int width, height;
-		localXPos = localYPos = 0;
-		width = height = 0;
 
-		glfwGetWindowSize(window, &width, &height);
-		glfwGetCursorPos(window, &localXPos, &localYPos);
 		if (interaction && localYPos > 17.5)
 		{
 #pragma region
-			float x = (2.0f * localXPos) / width - 1.0f;
-			float y = 1.0f - (2.0f * localYPos) / height;
-			float z = 1.0f;
 
 			GLint viewport[4]; //var to hold the viewport info
 			GLdouble modelview[16]; //var to hold the modelview info
@@ -553,7 +576,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 #pragma endregion
 
-			vec3 screenPos(x, y, 0.0f);
+			vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
 			vec3 dir(0, 0, -1.0f);
 			//vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
 			Ray ray(screenPos, dir);
@@ -586,10 +609,23 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				}
 
-				models[intersectModel].points[closest] += vec3(model * vec4(1, 1, 1, 0));
-				update = true;
-				vec3 upper = models[intersectModel].box->bounds[0];
-				printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);
+				if (selectedModel == -1 && selectedPoint == -1)
+				{
+					selectedModel = intersectModel;
+					selectedPoint = closest;
+					movementStart = screenPos;
+				}
+				//else
+				//{
+				//	vec3 movement = screenPos - movementStart;
+				//	models[intersectModel].points[closest] += vec3(model * vec4(movement, 0));
+				//	movementStart = screenPos;
+				//	update = true;
+
+				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
+				//	/*vec3 upper = models[intersectModel].box->bounds[0];
+				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);*/
+				//}
 			}
 
 			if (action == GLFW_PRESS && intersectModel == -1)
@@ -600,9 +636,13 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			{
 				leftPress = false;
 				xPos = yPos = 0;
+				selectedModel = selectedPoint = -1;
+				movementStart = vec3(0, 0, 0);
+
 			}
 		}
 	}
+
 }
 
 
@@ -620,10 +660,12 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	if (total > 0)
 	{
 		scroll -= 0.1f;
+		culumScroll -= 0.1f;
 	}
 	else if (total < 0)
 	{
 		scroll += 0.1f;
+		culumScroll += 0.1f;
 	}
 }
 
@@ -692,7 +734,7 @@ int main()
 		{
 			if (ImGui::BeginMainMenuBar())
 			{
-				
+
 				if (ImGui::BeginMenu("File"))
 				{
 					interaction = false;
@@ -708,6 +750,7 @@ int main()
 						CComPtr<IFileOpenDialog> dlg;
 						COMDLG_FILTERSPEC aFileTypes[] = {
 							{ L"Object", L"*.obj" },
+							{ L"Stero", L"*.stl" },
 							{ L"All files", L"*.*" }
 						};
 
@@ -755,6 +798,7 @@ int main()
 									{
 										LoadModel();
 										ParseModels();
+										xRotation = yRotation = zRotation = 0;
 									}
 								}
 							}
