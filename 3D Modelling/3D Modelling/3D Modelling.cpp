@@ -78,7 +78,6 @@ enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 1 };
 enum Buffer_IDs { ArrayBuffer, NumBuffers = 3 };
 enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2 };
 
-
 GLuint VAO[NumVAOs];
 
 GLuint Buffers[NumBuffers];
@@ -95,6 +94,7 @@ vec3 cameraPos;
 aiMatrix4x4 matrix;
 
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
+float xPan = 0.0f, yPan = 0.0f, zPan = 0.0f;
 float scroll = 0.0f, culumScroll = 0.0f;
 
 int selectedModel = -1, selectedPoint = -1;
@@ -102,6 +102,7 @@ vec3 movementStart;
 
 double xPos, yPos;
 bool leftPress;
+bool rightPress;
 bool update;
 bool interaction;
 
@@ -138,13 +139,13 @@ void getMinMax(vector<vec3> glmVerticies, vec3& Max, vec3& Min)
 	}
 	//check if position lies at max
 
-	Max.x = x[maxX];// new vec3(x[maxX], y[maxY], z[maxZ]);//3.5
-	Max.y = y[maxY];//3.15
-	Max.z = z[maxZ];//2
-	//Min = new vec3(x[minX], y[minY], z[minZ]);
-	Min.x = x[minX];// new vec3(x[minX], y[minY], z[minZ]);//-3
-	Min.y = y[minY];//0
-	Min.z = z[minZ];//-2
+	Max.x = x[maxX];
+	Max.y = y[maxY];
+	Max.z = z[maxZ];
+
+	Min.x = x[minX];
+	Min.y = y[minY];
+	Min.z = z[minZ];
 }
 
 void LoadModel()
@@ -478,12 +479,21 @@ void display()
 	//binds VAO
 	glBindVertexArray(VAO[Triangles]);
 
-	model = glm::mat4(1.0f);
-	model = glm::scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
+	model = mat4(1.0f);
 
+	model = scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
+
+	if (rightPress)
+	{
+		model = glm::translate(model, vec3(xPan, yPan, zPan));
+	}
+	model = glm::translate(model, vec3(xPan, yPan, zPan));
+	//if rotation >180, appears inverted, "bug"
 	model = rotate(model, radians(xRotation), vec3(0.0f, 1.0f, .0f));
 	model = rotate(model, radians(yRotation), vec3(1.0f, 0.0f, 0.0f));
 	model = rotate(model, radians(zRotation), vec3(0.0f, 0.0f, 1.0f));
+
+
 
 	if (models.size() > 0)
 	{//need to iterate
@@ -521,29 +531,33 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	float y = 1.0f - (2.0f * localYPos) / height;
 	float z = 1.0f;
 
+	vec4 ray_clip(x, y, -1, 1);
+	vec4 ray_eye = inverse(projection) * ray_clip;
+	ray_eye = vec4(ray_eye.x, ray_eye.y, -1, 0);
+	vec3 rayWorld = vec3(inverse(view) * ray_eye);
+	rayWorld = normalize(rayWorld);
+	Ray updatedRay(vec3(x, y, -1), rayWorld);
 
 	if (selectedModel != -1 && selectedPoint != -1)
 	{
-
 		vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
 		vec4 movement = vec4(screenPos - movementStart, 0);
 		movement = view * movement;
 		models[selectedModel].points[selectedPoint] += vec3(model * movement);
+		models[selectedModel].points[selectedPoint] = vec3(0,0,0);
 		movementStart = screenPos;
 		update = true;
 		vec3 printPoint(models[selectedModel].points[selectedPoint].x, models[selectedModel].points[selectedPoint].y, models[selectedModel].points[selectedPoint].z);
-		printf("\n%f,%f,%f\n",
+		printf("\nEnd Point:%f,%f,%f\n",
 			printPoint.x,
 			printPoint.y,
 			printPoint.z);
 		/*vec3 upper = models[intersectModel].box->bounds[0];
 		printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);*/
 	}
-
-	if (button == GLFW_MOUSE_BUTTON_1)
+	if (interaction && localYPos > 17.5)
 	{
-
-		if (interaction && localYPos > 17.5)
+		if (button == GLFW_MOUSE_BUTTON_1)
 		{
 #pragma region
 
@@ -589,26 +603,32 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				//also box need to rotate with model
 				//models[i].boundBox.rayIntersects(nearPoint, direction)
 				//GLUnproject getting contant point regalress of position
-				if (models[i].box->intersect(ray))
+				if (models[i].box->intersect(updatedRay))
 				{
 					intersectModel = i;
 					break;
 				}
 			}
 
-			vec3 nearPoint(x, y, z);
+			vec4 nearPoint(x, y, z, 1);
+			nearPoint = view * nearPoint;
+			nearPoint = nearPoint * vec4(xRotation, yRotation, zRotation, 0);
 			if (intersectModel != -1)
 			{
 				int closest = 0;
 				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 				{
-					if (distance(nearPoint, models[intersectModel].points[i]) < distance(nearPoint, models[intersectModel].points[closest]))
+					if (distance(vec3(nearPoint), models[intersectModel].points[i]) < distance(vec3(nearPoint), models[intersectModel].points[closest]))
 					{
 						closest = i;
 					}
 
 				}
 
+				printf("\nSelected Point:%f,%f,%f\n",
+					models[intersectModel].points[closest].x,
+					models[intersectModel].points[closest].y,
+					models[intersectModel].points[closest].z);
 				if (selectedModel == -1 && selectedPoint == -1)
 				{
 					selectedModel = intersectModel;
@@ -640,9 +660,22 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				movementStart = vec3(0, 0, 0);
 
 			}
+
+		}
+
+		else if (button == GLFW_MOUSE_BUTTON_2)
+		{
+			if (action == GLFW_PRESS)
+			{
+				rightPress = true;
+			}
+			else if (action == GLFW_RELEASE)
+			{
+				rightPress = false;
+				xPos = yPos = 0;
+			}
 		}
 	}
-
 }
 
 
@@ -687,6 +720,20 @@ void CheckEvents(GLFWwindow* window)
 		xPos = localXPos;
 		yPos = localYPos;
 	}
+	else if (rightPress == true)
+	{
+		double localXPos, localYPos;
+		localXPos = localYPos = 0;
+
+		glfwGetCursorPos(window, &localXPos, &localYPos);
+		if (!(xPos == 0 && yPos == 0))
+		{
+			xPan -= (xPos - (float)localXPos) / 100;
+			yPan += (yPos - (float)localYPos) / 100;
+		}
+		xPos = localXPos;
+		yPos = localYPos;
+	}
 }
 
 int main()
@@ -715,14 +762,20 @@ int main()
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	glPolygonMode(GL_FRONT, GL_FILL);
+
+	glPointSize(30);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 
 	while (!glfwWindowShouldClose(window))
 	{
 		if (update)
 		{
 			ParseModels();
-			update = false;
+			if (leftPress == false)
+			{
+				update = false;
+			}
+
 		}
 
 		display();
