@@ -23,7 +23,7 @@ main()
 	//Normalise
 	//N = normalize(N);
 	
-	V = normalize(V);
+	//V = normalize(V);
 	gl_Position = p_matrix * P;
       
 	//fragColour=vColour;

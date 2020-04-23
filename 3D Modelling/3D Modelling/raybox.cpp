@@ -42,10 +42,10 @@ glm::vec3 invdir;
 int sign[3];
 
 
-Ray::Ray(const glm::vec3 orig, const glm::vec3 dir) : orig(orig), dir(dir)
+Ray::Ray(const glm::vec3 origin, const glm::vec3 direct) 
 {
-
-	invdir = glm::vec3(1 / dir.x, 1 / dir.y, 1 / dir.z);
+	orig = origin;
+	invdir = glm::vec3(1 / direct.x, 1 / direct.y, 1 / direct.z);
 	sign[0] = (invdir.x < 0);
 	sign[1] = (invdir.y < 0);
 	sign[2] = (invdir.z < 0);

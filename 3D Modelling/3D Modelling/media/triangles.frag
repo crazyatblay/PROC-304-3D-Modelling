@@ -6,4 +6,5 @@ in vec4 fragColour;
 void main()
 {	
 	fColor=fragColour;
+	
 }

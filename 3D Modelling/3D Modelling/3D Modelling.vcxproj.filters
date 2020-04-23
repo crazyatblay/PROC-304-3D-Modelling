@@ -16,6 +16,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{c8506898-b2b8-45a6-b2c3-c6e505987a2f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="picking">
+      <UniqueIdentifier>{3c27a086-6d52-445f-ac30-d4b8ebbff697}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="3D Modelling.cpp">
@@ -56,6 +59,9 @@
     </ClCompile>
     <ClCompile Include="imgui_stdlib.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="maths_funcs.cpp">
+      <Filter>picking</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -100,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="imgui_stdlib.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="maths_funcs.h">
+      <Filter>picking</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -44,6 +44,8 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_stdlib.h"
 
+#include "maths_funcs.h"
+
 #include <vector>
 #include <iostream>
 #pragma endregion includes
@@ -87,24 +89,30 @@ GLuint program;
 const aiScene* scene;
 vector<Model> models;
 
-mat4 model;
-mat4 view;
-mat4 projection;
-vec3 cameraPos;
-aiMatrix4x4 matrix;
+glm::vec3 sphere_pos_wor[] = { glm::vec3(-2.0, 0.0, 0.0), glm::vec3(2.0, 0.0, 0.0), glm::vec3(-2.0, 0.0, -2.0), glm::vec3(1.5, 1.0, -1.0) };
+const float sphere_radius = 1.0f;
 
-float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;
-float xPan = 0.0f, yPan = 0.0f, zPan = 0.0f;
-float scroll = 0.0f, culumScroll = 0.0f;
+glm::mat4 model;//local?
+glm::mat4 view;//view_mat
+glm::mat4 projection;//proj_mat
+glm::vec3 cameraPos;//cam_pos
+
+float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;//pitch,yaw,roll
+float xPan = 0.0f, yPan = 0.0f, zPan = 0.0f;//move
+float scroll = 10.0f, culumScroll = 0.0f;
+
+versor quaternion;
+glm::mat4 rotationMatrix;
 
 int selectedModel = -1, selectedPoint = -1;
-vec3 movementStart;
+glm::vec2 movementStart;
 
 double xPos, yPos;
 bool leftPress;
 bool rightPress;
 bool update;
 bool interaction;
+bool updatePoint = false;
 
 string filePath;
 string fileName;
@@ -113,7 +121,14 @@ ExportType currentType;
 #define BUFFER_OFFSET(a)((void*)(a))
 #pragma endregion Vars
 
-void getMinMax(vector<vec3> glmVerticies, vec3& Max, vec3& Min)
+class IRenderCallbacks
+{
+public:
+	virtual void DrawStartCB(unsigned int DrawIndex) = 0;
+};
+
+
+void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
 {
 	vector<float> x, y, z;
 	for (int i = 0; i < (int)glmVerticies.size(); i++)
@@ -196,7 +211,7 @@ void LoadModel()
 
 	//check if position lies at max
 
-	vec3 pointMin, pointMax;
+	glm::vec3 pointMin, pointMax;
 	getMinMax(glmVerticies, pointMin, pointMax);
 	//float height =   pointMin.y-pointMax.y;// y[maxY] - y[minY];
 	//for (int i = 0; i < glmVerticies.size(); i++)
@@ -230,7 +245,7 @@ void ParseModels()
 	program = LoadShaders(shaders);
 	glUseProgram(program);
 
-	vector<vec3> finalPoints;
+	vector<glm::vec3> finalPoints;
 
 	for (int j = 0; j < (int)models.size(); j++)
 	{
@@ -356,6 +371,71 @@ void SplitInput(string input)
 	currentType = compareInput(fileTypeLoc);
 }
 
+void LoadSetup(GLFWwindow* window)
+{
+	models.clear();
+
+	IFileDialog* pfd = NULL;
+	HRESULT hr;
+	HWND hWnd = glfwGetWin32Window(window);
+	CComPtr<IFileOpenDialog> dlg;
+	COMDLG_FILTERSPEC aFileTypes[] = {
+		{ L"Object", L"*.obj" },
+		{ L"Stero", L"*.stl" },
+		{ L"All files", L"*.*" }
+	};
+
+	hr = dlg.CoCreateInstance(__uuidof(FileOpenDialog));
+	if (FAILED(hr))
+	{
+		//need to implement
+		//status = AI_FAILURE;
+	}
+	dlg->SetFileTypes(countof(aFileTypes), aFileTypes);
+	dlg->SetTitle(L"Load construct");
+	dlg->SetOkButtonLabel(L"Load ");
+	dlg->SetDefaultExtension(L".obj");
+	hr = dlg->Show(hWnd);
+
+	if (SUCCEEDED(hr))
+	{
+		CComPtr<IShellItem> pItem;
+		hr = dlg->GetResult(&pItem);
+		if (SUCCEEDED(hr))
+		{
+			LPOLESTR pwsz = NULL;
+
+			hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
+
+			if (SUCCEEDED(hr))
+			{
+				wchar_t* poleConv = pwsz;
+				wstring wCharConv(poleConv);
+				string wStringConv(wCharConv.begin(), wCharConv.end());
+				SplitInput(wStringConv);
+				string fileExt = compareOutput(currentType);
+				if (fileExt == "")
+				{
+					MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
+					return;
+				}
+				string path = filePath + fileName + fileExt;
+				scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+				if (scene == nullptr)
+				{
+					MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
+				}
+				else
+				{
+					LoadModel();
+					ParseModels();
+					xRotation = yRotation = zRotation = 0;
+				}
+			}
+		}
+	}
+}
+
 //fileName+path
 aiReturn saveScene(string FileName, ExportType ex)
 {
@@ -395,40 +475,6 @@ aiReturn saveScene(string FileName, ExportType ex)
 	}
 	output.append(compareOutput(ex));
 
-#pragma region 	
-	/*switch (ex)
-	{
-	case 0:
-		output.append(".dae");
-		break;
-	case 3:
-	case 4:
-		output.append(".obj");
-		break;
-	case 5:
-	case 6:
-		output.append(".stl");
-		break;
-	case 7:
-	case 8:
-		output.append(".ply");
-		break;
-	case 10:
-	case 11:
-		output.append(".glb");
-		break;
-	case 16:
-		output.append(".x3d");
-		break;
-	case 17:
-	case 18:
-		output.append(".fbx");
-		break;
-	default:
-		return aiReturn_FAILURE;
-	}*/
-#pragma endregion Switch(MOVED TO COMPARE)
-
 	try
 	{
 		vector<aiFace> facesList;
@@ -458,12 +504,72 @@ aiReturn saveScene(string FileName, ExportType ex)
 			//facesList.clear();doens't liek clearing faces? unsure why but whatever.
 		}
 
-
 		return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 	}
 	catch (exception e)
 	{
 		return aiReturn_FAILURE;
+	}
+}
+
+void SaveSetup(GLFWwindow* window)
+{
+	aiReturn status = AI_FAILURE;
+
+	IFileDialog* pfd = NULL;
+	HRESULT hr;
+	HWND hWnd = glfwGetWin32Window(window);
+	CComPtr<IFileSaveDialog> dlg;
+	COMDLG_FILTERSPEC aFileTypes[] = {
+		{ L"Object", L"*.obj" },
+		{ L"All files", L"*.*" }
+	};
+
+	hr = dlg.CoCreateInstance(__uuidof(FileSaveDialog));
+	if (FAILED(hr))
+	{
+		status = AI_FAILURE;
+	}
+	dlg->SetFileTypes(countof(aFileTypes), aFileTypes);
+	dlg->SetTitle(L"Save construct");
+	dlg->SetOkButtonLabel(L"Save ");
+	dlg->SetDefaultExtension(L".obj");
+
+	//taken from stackoverflow, might have problems?
+	wstring convert(fileName.begin(), fileName.end());
+	dlg->SetFileName(convert.c_str());
+
+	hr = dlg->Show(hWnd);
+
+	if (SUCCEEDED(hr))
+	{
+		CComPtr<IShellItem> pItem;
+		hr = dlg->GetResult(&pItem);
+		if (SUCCEEDED(hr))
+		{
+			LPOLESTR pwsz = NULL;
+
+			hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
+
+			if (SUCCEEDED(hr))
+			{
+				wchar_t* poleConv = pwsz;
+				wstring wCharConv(poleConv);
+				string wStringConv(wCharConv.begin(), wCharConv.end());
+				SplitInput(wStringConv);
+
+				status = saveScene(filePath + fileName, currentType);
+			}
+		}
+	}
+
+	if (status == AI_SUCCESS)
+	{
+		MessageBox(nullptr, TEXT("Saved"), TEXT("Successfully saved!"), MB_OK);
+	}
+	else
+	{
+		MessageBox(nullptr, TEXT("Saving Failure"), TEXT("Failed to save file."), MB_OK);
 	}
 }
 
@@ -479,33 +585,39 @@ void display()
 	//binds VAO
 	glBindVertexArray(VAO[Triangles]);
 
-	model = mat4(1.0f);
+	model = glm::mat4(1.0f);
 
-	model = scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
+	//model = scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
 
-	if (rightPress)
-	{
-		model = glm::translate(model, vec3(xPan, yPan, zPan));
-	}
-	model = glm::translate(model, vec3(xPan, yPan, zPan));
-	//if rotation >180, appears inverted, "bug"
-	model = rotate(model, radians(xRotation), vec3(0.0f, 1.0f, .0f));
-	model = rotate(model, radians(yRotation), vec3(1.0f, 0.0f, 0.0f));
-	model = rotate(model, radians(zRotation), vec3(0.0f, 0.0f, 1.0f));
+	//if (rightPress)
+	//{
+	//	model = glm::translate(model, glm::vec3(xPan, yPan, zPan));
+	//}
+	//model = glm::translate(model, glm::vec3(xPan, yPan, zPan));
+	////if rotation >180, appears inverted, "bug"
+	//model = rotate(model, radians(xRotation), glm::vec3(0.0f, 1.0f, .0f));
+	//model = rotate(model, radians(yRotation), glm::vec3(1.0f, 0.0f, 0.0f));
+	//model = rotate(model, radians(zRotation), glm::vec3(0.0f, 0.0f, 1.0f));
 
 
 
 	if (models.size() > 0)
 	{//need to iterate
 		getMinMax(models[0].points, models[0].box->bounds[0], models[0].box->bounds[1]);
-		models[0].box->bounds[0] = model * vec4(models[0].box->bounds[0], 1);
-		models[0].box->bounds[1] = model * vec4(models[0].box->bounds[1], 1);
+		models[0].box->bounds[0] = model * glm::vec4(models[0].box->bounds[0], 1);
+		models[0].box->bounds[1] = model * glm::vec4(models[0].box->bounds[1], 1);
 	}
-	view = glm::translate(view, glm::vec3(0.0f, 0.0f, (-4.0f * scroll)));
-	scroll = 0.0f;
-	/*view = lookAt(cameraPos,
+	//view = glm::translate(view, glm::vec3(0.0f, 0.0f, (-4.0f * scroll)));
+	cameraPos.x += xPan;
+	cameraPos.y += yPan;
+	cameraPos.z += scroll;
+
+
+	view = lookAt(cameraPos,
 		vec3(0, 0, 0),
-		vec3(0, 1, 0));*/
+		vec3(0, 1, 0));
+
+	scroll = xPan = yPan = 0.0f;
 
 	glm::mat4 mv = view * model;
 	projection = glm::perspective(45.0f, 4.0f / 3, 0.1f, 20.0f);
@@ -516,7 +628,75 @@ void display()
 	int pLoc = glGetUniformLocation(program, "p_matrix");
 	glUniformMatrix4fv(pLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+
 	glDrawArrays(GL_TRIANGLES, 0, NumVertices);
+
+}
+
+/* check if a ray and a sphere intersect. if not hit, returns false. it rejects
+intersections behind the ray caster's origin, and sets intersection_distance to
+the closest intersection */
+bool ray_sphere(glm::vec3 ray_origin_wor, glm::vec3 ray_direction_wor, glm::vec3 sphere_centre_wor, float sphere_radius, float* intersection_distance) {
+	// work out components of quadratic
+	glm::vec3 dist_to_sphere = ray_origin_wor - sphere_centre_wor;
+	float b = dot(ray_direction_wor, dist_to_sphere);
+	float c = dot(dist_to_sphere, dist_to_sphere) - sphere_radius * sphere_radius;
+	float b_squared_minus_c = b * b - c;
+	// check for "imaginary" answer. == ray completely misses sphere
+	if (b_squared_minus_c < 0.0f) { return false; }
+	// check for ray hitting twice (in and out of the sphere)
+	if (b_squared_minus_c > 0.0f) {
+		// get the 2 intersection distances along ray
+		float t_a = -b + sqrt(b_squared_minus_c);
+		float t_b = -b - sqrt(b_squared_minus_c);
+		*intersection_distance = t_b;
+		// if behind viewer, throw one or both away
+		if (t_a < 0.0) {
+			if (t_b < 0.0) { return false; }
+		}
+		else if (t_b < 0.0) {
+			*intersection_distance = t_a;
+		}
+
+		return true;
+	}
+	// check for ray hitting once (skimming the surface)
+	if (0.0f == b_squared_minus_c) {
+		// if behind viewer, throw away
+		float t = -b + sqrt(b_squared_minus_c);
+		if (t < 0.0f) { return false; }
+		*intersection_distance = t;
+		return true;
+	}
+	// note: could also check if ray origin is inside sphere radius
+	return false;
+}
+
+
+glm::vec3 get_ray_from_mouse(float mouse_x, float mouse_y, GLFWwindow* window) {
+
+	int g_gl_window_width, g_gl_window_height;
+	glfwGetWindowSize(window, &g_gl_window_width, &g_gl_window_height);
+	// screen space (viewport coordinates)
+	float x = (2.0f * mouse_x) / g_gl_window_width - 1.0f;
+	float y = 1.0f - (2.0f * mouse_y) / g_gl_window_height;
+	float z = 1.0f;
+	// normalised device space
+	glm::vec3 ray_nds = glm::vec3(x, y, z);
+	// clip space
+	glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
+	// eye space
+
+	//vec4 ray_eye = inverse(proj_mat) * ray_clip;
+	glm::vec4 ray_eye = inverse(projection) * ray_clip;
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	// world space
+	//replaced view
+	glm::vec3 ray_wor = glm::vec3(inverse(view) * ray_eye);
+	// don't forget to normalise the vector at some point
+	//normalise->lize
+	ray_wor = normalize(ray_wor);
+	return ray_wor;
 }
 
 void mouse_callback(GLFWwindow* window, int button, int action, int mods)
@@ -531,69 +711,105 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	float y = 1.0f - (2.0f * localYPos) / height;
 	float z = 1.0f;
 
-	vec4 ray_clip(x, y, -1, 1);
-	vec4 ray_eye = inverse(projection) * ray_clip;
-	ray_eye = vec4(ray_eye.x, ray_eye.y, -1, 0);
-	vec3 rayWorld = vec3(inverse(view) * ray_eye);
-	rayWorld = normalize(rayWorld);
-	Ray updatedRay(vec3(x, y, -1), rayWorld);
+	float size = 3.0f;
 
+	glm::vec4 ray_clip(x, y, -1, 1);
+	glm::vec4 ray_eye = inverse(projection) * ray_clip;
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1, 0);
+	glm::vec3 rayWorld = glm::vec3(inverse(view) * ray_eye);
+	rayWorld = normalize(rayWorld);
+	//Ray(glm::vec3(x, y, -1), rayWorld);
+
+#pragma region
 	if (selectedModel != -1 && selectedPoint != -1)
 	{
-		vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
-		vec4 movement = vec4(screenPos - movementStart, 0);
-		movement = view * movement;
-		models[selectedModel].points[selectedPoint] += vec3(model * movement);
-		models[selectedModel].points[selectedPoint] = vec3(0,0,0);
-		movementStart = screenPos;
-		update = true;
-		vec3 printPoint(models[selectedModel].points[selectedPoint].x, models[selectedModel].points[selectedPoint].y, models[selectedModel].points[selectedPoint].z);
-		printf("\nEnd Point:%f,%f,%f\n",
-			printPoint.x,
-			printPoint.y,
-			printPoint.z);
-		/*vec3 upper = models[intersectModel].box->bounds[0];
-		printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);*/
+		updatePoint = (selectedModel != -1 && selectedPoint != -1);
+
+		/*ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Render();*/
+		//glm::vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
+		//glm::vec4 movement = glm::vec4(screenPos - vec3(movementStart, 0), 0);
+		//movement = view * movement;
+		//models[selectedModel].points[selectedPoint] += glm::vec3(model * movement);
+
+		//movementStart = screenPos;
+		////update = true;
+		//glm::vec3 printPoint(models[selectedModel].points[selectedPoint].x, models[selectedModel].points[selectedPoint].y, models[selectedModel].points[selectedPoint].z);
+		//printf("\nEnd Point:%f,%f,%f\n",
+		//	printPoint.x,
+		//	printPoint.y,
+		//	printPoint.z);
+
 	}
+
 	if (interaction && localYPos > 17.5)
 	{
 		if (button == GLFW_MOUSE_BUTTON_1)
 		{
+
+			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
+
+			/*	int closest_sphere_clicked = -1;
+				float closest_intersection = 0.0f;
+				for (int i = 0; i < 4; i++)
+				{
+					float t_dist = 0.0f;
+					if (ray_sphere(cameraPos, rayWor, sphere_pos_wor[i], sphere_radius, &t_dist))
+					{
+						if (-1 == closest_sphere_clicked || t_dist < closest_intersection) {
+							closest_sphere_clicked = i;
+							closest_intersection = t_dist;
+						}
+					}
+				}*/
+
 #pragma region
-
-			GLint viewport[4]; //var to hold the viewport info
-			GLdouble modelview[16]; //var to hold the modelview info
-			GLdouble projection[16]; //var to hold the projection matrix info
-			GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
-			GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
-
-			glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
-			glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
-			glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
-
-			winX = (float)x;
-			winY = (float)viewport[3] - (float)y;
-			winZ = -100;
-
-			//get the world coordinates from the screen coordinates
-			gluUnProject(x, y, z, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-			vec3 worldPos(worldX, worldY, worldZ);
+				/*
 
 
+							GLint viewport[4]; //var to hold the viewport info
+							GLdouble modelview[16]; //var to hold the modelview info
+							GLdouble projection[16]; //var to hold the projection matrix info
+							GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
+							GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
 
-			//GLdouble pos3D_x, pos3D_y, pos3D_z;// arrays to hold matrix informationGL
-			//double model_view[16];glGetDoublev(GL_MODELVIEW_MATRIX, model_view);
-			//GLdouble projection[16];glGetDoublev(GL_PROJECTION_MATRIX, projection);
-			//GLint viewport[4];glGetIntegerv(GL_VIEWPORT, viewport);
-			//								   // get 3D coordinates based on window coordinates
-			//gluUnProject(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.01,	model_view, projection, viewport,	&pos3D_x, &pos3D_y, &pos3D_z);
+							glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+							glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+							glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
 
+							winX = (float)localXPos;
+							winY = (float)viewport[3] - (float)localYPos;
+
+							glm::vec3 screenPos, farPos, dodgy;
+							//near plane
+							gluUnProject(winX, winY, 0, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+							screenPos = glm::vec3(worldX, worldY, worldZ);
+							//farPlane
+							gluUnProject(winX, winY, 1, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+							farPos = glm::vec3(worldX, worldY, worldZ);
+
+							vector<glm::vec3>screen;
+							if (models.size() >= 1)
+							{
+								for (int i = 0; i < models[0].points.size(); i++)
+								{
+									gluProject(models[0].points[i].x, models[0].points[i].y, models[0].points[i].z,
+										modelview, projection, viewport,
+										&worldX, &worldY, &worldZ);
+									screen.push_back(glm::vec3(worldX, worldY, worldZ));
+								}
+							}
+							glm::vec3 screenPoint(winX, winY, -100);
+
+				*/
 #pragma endregion
+				//vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
+				//glm::vec3 dir(farPos - screenPos);
 
-			vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
-			vec3 dir(0, 0, -1.0f);
-			//vec3 randDir(2 * dis(gen) - 1, 2 * dis(gen) - 1, 2 * dis(gen) - 1);
-			Ray ray(screenPos, dir);
+			Ray rayDir(vec3(view * vec4(cameraPos,1)), rayWor);
 
 			int intersectModel = -1;
 			for (int i = 0; i < (int)models.size(); i++)
@@ -603,37 +819,40 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				//also box need to rotate with model
 				//models[i].boundBox.rayIntersects(nearPoint, direction)
 				//GLUnproject getting contant point regalress of position
-				if (models[i].box->intersect(updatedRay))
+				if (models[i].box->intersect(rayDir))
 				{
 					intersectModel = i;
 					break;
 				}
 			}
 
-			vec4 nearPoint(x, y, z, 1);
+			glm::vec4 nearPoint(x, y, z, 1);
 			nearPoint = view * nearPoint;
-			nearPoint = nearPoint * vec4(xRotation, yRotation, zRotation, 0);
+			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
+			vector<glm::vec3> pointsList;
+			int closest = 0;
 			if (intersectModel != -1)
 			{
-				int closest = 0;
+
 				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 				{
-					if (distance(vec3(nearPoint), models[intersectModel].points[i]) < distance(vec3(nearPoint), models[intersectModel].points[closest]))
+					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
 					{
 						closest = i;
 					}
 
 				}
 
-				printf("\nSelected Point:%f,%f,%f\n",
-					models[intersectModel].points[closest].x,
-					models[intersectModel].points[closest].y,
-					models[intersectModel].points[closest].z);
-				if (selectedModel == -1 && selectedPoint == -1)
+
+				/*printf("\nSelected Point:%f,%f,%f\n",
+					models[intersectModel].points[closestScreen].x,
+					models[intersectModel].points[closestScreen].y,
+					models[intersectModel].points[closestScreen].z);*/
+				if (intersectModel != -1 && closest != -1)
 				{
 					selectedModel = intersectModel;
 					selectedPoint = closest;
-					movementStart = screenPos;
+					movementStart = vec2(localXPos, localYPos);
 				}
 				//else
 				//{
@@ -644,7 +863,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
 				//	/*vec3 upper = models[intersectModel].box->bounds[0];
-				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z);*/
+				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z
 				//}
 			}
 
@@ -655,9 +874,10 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			else if (action == GLFW_RELEASE)
 			{
 				leftPress = false;
+				rightPress = false;
 				xPos = yPos = 0;
-				selectedModel = selectedPoint = -1;
-				movementStart = vec3(0, 0, 0);
+				//selectedModel = selectedPoint = -1;
+				movementStart = glm::vec2(0, 0);
 
 			}
 
@@ -676,6 +896,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			}
 		}
 	}
+#pragma endregion 
 }
 
 
@@ -683,7 +904,19 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_S && mods == GLFW_MOD_CONTROL)
 	{
-		//saveSetUp();
+		SaveSetup(window);
+	}
+
+	if (key == GLFW_KEY_L && mods == GLFW_MOD_CONTROL)
+	{
+		LoadSetup(window);
+	}
+
+
+	if (key == GLFW_KEY_SPACE)
+	{
+		cameraPos = glm::vec3(0, 0, -1);
+		xRotation = yRotation = 0;
 	}
 }
 
@@ -704,46 +937,114 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 void CheckEvents(GLFWwindow* window)
 {
-	if (leftPress == true)
+	POINT point;
+	if (!(ScreenToClient(glfwGetWin32Window(window), &point)))
 	{
-		double localXPos, localYPos;
-		localXPos = localYPos = 0;
+		rightPress = leftPress = false;
+	}
+
+
+
+	double localXRotate, localYRotate;//pitch, yaw
+	double localXPan, localYPan;//move.x,move.y
+	if (leftPress)
+	{
+		rightPress = false;
+		localXRotate = localYRotate = 0;
 
 		//glfwSetCursorPos(window, 100, 100);
-		glfwGetCursorPos(window, &localXPos, &localYPos);
-		if (!(xPos == 0 && yPos == 0))
+		glfwGetCursorPos(window, &localXRotate, &localYRotate);
+		if (xPos != 0 && yPos != 0)
 		{
-			xRotation -= xPos - (float)localXPos;
-			yRotation -= yPos - (float)localYPos;
+			xRotation -= xPos - (float)localXRotate;
+			yRotation -= yPos - (float)localYRotate;
 
 		}
-		xPos = localXPos;
-		yPos = localYPos;
+
+		if (xRotation > 360)
+		{
+			xRotation -= 360;
+		}
+		else if (xRotation < -360)
+		{
+			xRotation += 360;
+		}
+
+		if (yRotation > 360)
+		{
+			yRotation -= 360;
+		}
+		else if (yRotation < -360)
+		{
+			yRotation += 360;
+		}
+		xPos = localXRotate;
+		yPos = localYRotate;
 	}
-	else if (rightPress == true)
+	else if (rightPress)
 	{
-		double localXPos, localYPos;
-		localXPos = localYPos = 0;
+		leftPress = false;
+		localXPan = localYPan = 0;
 
-		glfwGetCursorPos(window, &localXPos, &localYPos);
-		if (!(xPos == 0 && yPos == 0))
+		glfwGetCursorPos(window, &localXPan, &localYPan);
+		if (xPos != 0 && yPos != 0)
 		{
-			xPan -= (xPos - (float)localXPos) / 100;
-			yPan += (yPos - (float)localYPos) / 100;
+			xPan -= (xPos - (float)localXPan) / 100;
+			yPan += (yPos - (float)localYPan) / 100;
 		}
-		xPos = localXPos;
-		yPos = localYPos;
+		xPos = localXPan;
+		yPos = localYPan;
+	}
+
+	if (rightPress || leftPress)
+	{
+		glm::vec3 movement(xRotation / 100, yRotation / 100, scroll);
+
+		versor pitch = quat_from_axis_deg(xRotation, 1, 0, 0);
+		versor yaw = quat_from_axis_deg(yRotation, 0, 1, 0);
+		quaternion = yaw * quaternion;
+		quaternion = pitch * quaternion;
+		maT4 convertVal = quat_to_maT4(quaternion);
+		rotationMatrix = Conversion::convertMat4(convertVal) * view;
+		glm::vec4 fwd = rotationMatrix * glm::vec4(0.0f, 0.0f, -1.0f, 0);
+		glm::vec4 rgt = rotationMatrix * glm::vec4(1.0f, 0.0f, -1.0f, 0);
+		glm::vec4 up = rotationMatrix * glm::vec4(0.0f, 1.0f, -1.0f, 0);
+
+		cameraPos += vec3(rgt * -movement.x);
+		cameraPos += vec3(up * movement.y);
+		cameraPos += vec3(fwd * -movement.z);
+
+
+		cameraPos.x = min(max(cameraPos.x, -5), 5);
+		cameraPos.y = min(max(cameraPos.y, -5), 5);
+		cameraPos.z = min(max(cameraPos.z, -5), 5);
+		//xRotation = yRotation = 0;
+		glm::mat4 Tin = translate(mat4(1.0f), cameraPos);
+		//model = scale(model, vec3(0.25, 0.25, 0.25));
+		//view = inverse(rotationMatrix) * inverse(Tin);
 	}
 }
 
+
+
+//get camera working
 int main()
 {
 #pragma region 
-	cameraPos = vec3(0, 0, -1);
+	update = false;
+
+	cameraPos = glm::vec3(0, 0, -1);
+	glm::mat4 T = translate(mat4(), glm::vec3(-cameraPos.x, -cameraPos.y, -cameraPos.z));
+	rotationMatrix = Conversion::convertMat4(maT4(rotate_y_deg(identity_maT4(), -0.0f)));
+	quaternion = quat_from_axis_deg(0.0f, 0, 1, 0);
+	view = rotationMatrix * T;
+
+	int WindowWidth = 1080, WindowHeight = 720;
+
 	glfwInit();
 
 	GLFWwindow* window = nullptr;
-	window = glfwCreateWindow(1080, 720, "3D Model Loading", NULL, NULL);
+	window = glfwCreateWindow(WindowWidth, WindowHeight, "3D Model Loading", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	glewInit();
 
@@ -764,7 +1065,8 @@ int main()
 	glfwSetScrollCallback(window, scroll_callback);
 
 	glPointSize(30);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -795,131 +1097,12 @@ int main()
 					//using window, need to add all options to filter.
 					if (ImGui::MenuItem("Load"))
 					{
-						models.clear();
-
-						IFileDialog* pfd = NULL;
-						HRESULT hr;
-						HWND hWnd = glfwGetWin32Window(window);
-						CComPtr<IFileOpenDialog> dlg;
-						COMDLG_FILTERSPEC aFileTypes[] = {
-							{ L"Object", L"*.obj" },
-							{ L"Stero", L"*.stl" },
-							{ L"All files", L"*.*" }
-						};
-
-						hr = dlg.CoCreateInstance(__uuidof(FileOpenDialog));
-						if (FAILED(hr))
-						{
-							//need to implement
-							//status = AI_FAILURE;
-						}
-						dlg->SetFileTypes(countof(aFileTypes), aFileTypes);
-						dlg->SetTitle(L"Load construct");
-						dlg->SetOkButtonLabel(L"Load ");
-						dlg->SetDefaultExtension(L".obj");
-						hr = dlg->Show(hWnd);
-
-						if (SUCCEEDED(hr))
-						{
-							CComPtr<IShellItem> pItem;
-							hr = dlg->GetResult(&pItem);
-							if (SUCCEEDED(hr))
-							{
-								LPOLESTR pwsz = NULL;
-
-								hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
-
-								if (SUCCEEDED(hr))
-								{
-									wchar_t* poleConv = pwsz;
-									wstring wCharConv(poleConv);
-									string wStringConv(wCharConv.begin(), wCharConv.end());
-									SplitInput(wStringConv);
-									string fileExt = compareOutput(currentType);
-									if (fileExt == "")
-									{
-										MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
-										break;
-									}
-									string path = filePath + fileName + fileExt;
-									scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
-									if (scene == nullptr)
-									{
-										MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
-									}
-									else
-									{
-										LoadModel();
-										ParseModels();
-										xRotation = yRotation = zRotation = 0;
-									}
-								}
-							}
-						}
-
-
-
+						LoadSetup(window);
 
 					}
 					if (ImGui::MenuItem("Save"))
 					{
-						aiReturn status = AI_FAILURE;
-
-						IFileDialog* pfd = NULL;
-						HRESULT hr;
-						HWND hWnd = glfwGetWin32Window(window);
-						CComPtr<IFileSaveDialog> dlg;
-						COMDLG_FILTERSPEC aFileTypes[] = {
-							{ L"Object", L"*.obj" },
-							{ L"All files", L"*.*" }
-						};
-
-						hr = dlg.CoCreateInstance(__uuidof(FileSaveDialog));
-						if (FAILED(hr))
-						{
-							status = AI_FAILURE;
-						}
-						dlg->SetFileTypes(countof(aFileTypes), aFileTypes);
-						dlg->SetTitle(L"Save construct");
-						dlg->SetOkButtonLabel(L"Save ");
-						dlg->SetDefaultExtension(L".obj");
-
-						//taken from stackoverflow, might have problems?
-						wstring convert(fileName.begin(), fileName.end());
-						dlg->SetFileName(convert.c_str());
-
-						hr = dlg->Show(hWnd);
-
-						if (SUCCEEDED(hr))
-						{
-							CComPtr<IShellItem> pItem;
-							hr = dlg->GetResult(&pItem);
-							if (SUCCEEDED(hr))
-							{
-								LPOLESTR pwsz = NULL;
-
-								hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
-
-								if (SUCCEEDED(hr))
-								{
-									wchar_t* poleConv = pwsz;
-									wstring wCharConv(poleConv);
-									string wStringConv(wCharConv.begin(), wCharConv.end());
-									SplitInput(wStringConv);
-
-									status = saveScene(filePath + fileName, currentType);
-								}
-							}
-						}
-
-						if (status == AI_SUCCESS)
-						{
-							MessageBox(nullptr, TEXT("Saved"), TEXT("Successfully saved!"), MB_OK);
-						}
-						else
-						{
-							MessageBox(nullptr, TEXT("Saving Failure"), TEXT("Failed to save file."), MB_OK);
-						}
+						SaveSetup(window);
 					}
 
 					//ImGui::Separator();
@@ -938,6 +1121,45 @@ int main()
 
 				ImGui::EndMainMenuBar();
 			}
+
+			float xVal, yVal, zVal;
+
+			if (updatePoint) {
+
+				ImGui::Begin("Move Point", &updatePoint);
+				{
+					interaction = true;
+					vec3 locl = models[selectedModel].points[selectedPoint];
+					/*xVal = locl.x;
+					yVal = locl.y;
+					zVal = locl.z;*/
+					ImGui::Text("Current point:%f,%f,%f", locl.x, locl.y, locl.z);
+
+					ImGui::InputFloat("x", &xVal, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("y", &yVal, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("z", &zVal, 0.01f, 0.1f, "%.8f");
+
+					bool confirm = ImGui::Button("Confirm");
+					if (confirm)
+					{
+						models[selectedModel].points[selectedPoint] = vec3(xVal, yVal, zVal);
+						selectedModel = selectedPoint = -1;
+						updatePoint = false;
+						update = true;
+						interaction = true;
+					}
+					bool cancel = ImGui::Button("Cancel");
+					if (cancel)
+					{
+						selectedModel = selectedPoint = -1;
+						updatePoint = false;
+						interaction = true;
+					}
+				}
+
+				ImGui::End();
+			}
+
 		}
 
 		ImGui::Render();
@@ -947,7 +1169,6 @@ int main()
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #pragma endregion Imgui Saving/Loading
 
-		//UpdateModel();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 		CheckEvents(window);

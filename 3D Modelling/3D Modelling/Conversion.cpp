@@ -20,7 +20,7 @@ std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
 {
 	std::vector<GLuint> ind;
 	for (int i = 0; i < faces.size(); i++)
-	{		
+	{
 		for (unsigned int j = 0; j < faces[i]->mNumIndices; j++)
 		{
 			unsigned int locInd = faces[i]->mIndices[j];
@@ -30,22 +30,22 @@ std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
 	return ind;
 }
 
- std::vector<aiFace> Conversion::parseGLMIndicies(std::vector<GLuint> indicies)
+std::vector<aiFace> Conversion::parseGLMIndicies(std::vector<GLuint> indicies)
 {
 	std::vector<aiFace> faces;
-	for (int i = 0; i < indicies.size(); i+=3)
+	for (int i = 0; i < indicies.size(); i += 3)
 	{
 		/*std::vector<unsigned int> locInd;*/
 		//making faces up of three indicies
 		const unsigned int faceIndicies = 3;
-		aiFace* locFace= new aiFace();
+		aiFace* locFace = new aiFace();
 		unsigned int faceList[faceIndicies];
 		locFace->mNumIndices = faceIndicies;
-		
+
 		for (unsigned int j = 0; j < faceIndicies; j++)
-		{			
+		{
 			faceList[j] = indicies[i];
-		}		
+		}
 
 		locFace->mIndices = faceList;
 		faces.push_back(*locFace);
@@ -84,4 +84,17 @@ mat4 Conversion::MatrixConversionAi(aiMatrix4x4 matIn)
 		*values[4], *values[5], *values[6], *values[7],
 		*values[8], *values[8], *values[10], *values[11],
 		*values[12], *values[13], *values[14], *values[15]);
+}
+
+
+
+glm::mat4 Conversion::convertMat4(maT4 matrix)
+{
+	float values[16] = { };
+	for (int i = 0; i < 16; i++)
+	{
+		values[i] = matrix.m[i];
+	}
+	glm::mat4 returnMat = glm::make_mat4x4(values);
+	return returnMat;
 }
