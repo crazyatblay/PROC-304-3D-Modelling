@@ -99,6 +99,7 @@ glm::vec3 cameraPos;//cam_pos
 
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;//pitch,yaw,roll
 float xPan = 0.0f, yPan = 0.0f, zPan = 0.0f;//move
+float culumXPan = 0.0f, culumYPan = 0.0f;
 float scroll = 10.0f, culumScroll = 0.0f;
 
 versor quaternion;
@@ -110,6 +111,7 @@ glm::vec2 movementStart;
 double xPos, yPos;
 bool leftPress;
 bool rightPress;
+bool middlePress;
 bool update;
 bool interaction;
 bool updatePoint = false;
@@ -614,7 +616,7 @@ void display()
 
 
 	view = lookAt(cameraPos,
-		vec3(0, 0, 0),
+		vec3(culumXPan, culumYPan, 0),
 		vec3(0, 1, 0));
 
 	scroll = xPan = yPan = 0.0f;
@@ -672,7 +674,6 @@ bool ray_sphere(glm::vec3 ray_origin_wor, glm::vec3 ray_direction_wor, glm::vec3
 	return false;
 }
 
-
 glm::vec3 get_ray_from_mouse(float mouse_x, float mouse_y, GLFWwindow* window) {
 
 	int g_gl_window_width, g_gl_window_height;
@@ -723,7 +724,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 #pragma region
 	if (selectedModel != -1 && selectedPoint != -1)
 	{
-		updatePoint = (selectedModel != -1 && selectedPoint != -1);
+		updatePoint = (selectedModel != -1 && selectedPoint != -1);//????
 
 		/*ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -746,79 +747,20 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 
 	if (interaction && localYPos > 17.5)
-	{
-		if (button == GLFW_MOUSE_BUTTON_1)
+	{//middle
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE)
 		{
 
 			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
 
-			/*	int closest_sphere_clicked = -1;
-				float closest_intersection = 0.0f;
-				for (int i = 0; i < 4; i++)
-				{
-					float t_dist = 0.0f;
-					if (ray_sphere(cameraPos, rayWor, sphere_pos_wor[i], sphere_radius, &t_dist))
-					{
-						if (-1 == closest_sphere_clicked || t_dist < closest_intersection) {
-							closest_sphere_clicked = i;
-							closest_intersection = t_dist;
-						}
-					}
-				}*/
-
-#pragma region
-				/*
-
-
-							GLint viewport[4]; //var to hold the viewport info
-							GLdouble modelview[16]; //var to hold the modelview info
-							GLdouble projection[16]; //var to hold the projection matrix info
-							GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
-							GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
-
-							glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
-							glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
-							glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
-
-							winX = (float)localXPos;
-							winY = (float)viewport[3] - (float)localYPos;
-
-							glm::vec3 screenPos, farPos, dodgy;
-							//near plane
-							gluUnProject(winX, winY, 0, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-							screenPos = glm::vec3(worldX, worldY, worldZ);
-							//farPlane
-							gluUnProject(winX, winY, 1, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-							farPos = glm::vec3(worldX, worldY, worldZ);
-
-							vector<glm::vec3>screen;
-							if (models.size() >= 1)
-							{
-								for (int i = 0; i < models[0].points.size(); i++)
-								{
-									gluProject(models[0].points[i].x, models[0].points[i].y, models[0].points[i].z,
-										modelview, projection, viewport,
-										&worldX, &worldY, &worldZ);
-									screen.push_back(glm::vec3(worldX, worldY, worldZ));
-								}
-							}
-							glm::vec3 screenPoint(winX, winY, -100);
-
-				*/
-#pragma endregion
-				//vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
-				//glm::vec3 dir(farPos - screenPos);
-
-			Ray rayDir(vec3(view * vec4(cameraPos,1)), rayWor);
+			double mouseX = ((width / xPos) / (width / 2)) * cameraPos.x;
+			double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
+			vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z, 1);
+			Ray rayDir(vec3(view * mousePos), rayWor);
 
 			int intersectModel = -1;
 			for (int i = 0; i < (int)models.size(); i++)
 			{
-				//bounding box is roughtly right height, X dimens seem off?
-				//raypicking needs to be redone, should be able to just check if its in bounds now.
-				//also box need to rotate with model
-				//models[i].boundBox.rayIntersects(nearPoint, direction)
-				//GLUnproject getting contant point regalress of position
 				if (models[i].box->intersect(rayDir))
 				{
 					intersectModel = i;
@@ -843,31 +785,157 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				}
 
-
-				/*printf("\nSelected Point:%f,%f,%f\n",
-					models[intersectModel].points[closestScreen].x,
-					models[intersectModel].points[closestScreen].y,
-					models[intersectModel].points[closestScreen].z);*/
 				if (intersectModel != -1 && closest != -1)
 				{
 					selectedModel = intersectModel;
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
 				}
-				//else
-				//{
-				//	vec3 movement = screenPos - movementStart;
-				//	models[intersectModel].points[closest] += vec3(model * vec4(movement, 0));
-				//	movementStart = screenPos;
-				//	update = true;
-
-				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
-				//	/*vec3 upper = models[intersectModel].box->bounds[0];
-				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z
-				//}
 			}
 
+
+
 			if (action == GLFW_PRESS && intersectModel == -1)
+			{
+				middlePress = true;
+			}
+			else if (action == GLFW_RELEASE)
+			{
+				middlePress = false;
+				rightPress = false;
+				xPos = yPos = 0;
+				movementStart = glm::vec2(0, 0);
+
+			}
+		}
+		//left
+		else if (button == GLFW_MOUSE_BUTTON_1)
+		{
+
+#pragma region
+			//			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
+			//
+			//			/*	int closest_sphere_clicked = -1;
+			//				float closest_intersection = 0.0f;
+			//				for (int i = 0; i < 4; i++)
+			//				{
+			//					float t_dist = 0.0f;
+			//					if (ray_sphere(cameraPos, rayWor, sphere_pos_wor[i], sphere_radius, &t_dist))
+			//					{
+			//						if (-1 == closest_sphere_clicked || t_dist < closest_intersection) {
+			//							closest_sphere_clicked = i;
+			//							closest_intersection = t_dist;
+			//						}
+			//					}
+			//				}*/
+			//
+			//#pragma region
+			//				/*
+			//
+			//
+			//							GLint viewport[4]; //var to hold the viewport info
+			//							GLdouble modelview[16]; //var to hold the modelview info
+			//							GLdouble projection[16]; //var to hold the projection matrix info
+			//							GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
+			//							GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
+			//
+			//							glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+			//							glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+			//							glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
+			//
+			//							winX = (float)localXPos;
+			//							winY = (float)viewport[3] - (float)localYPos;
+			//
+			//							glm::vec3 screenPos, farPos, dodgy;
+			//							//near plane
+			//							gluUnProject(winX, winY, 0, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+			//							screenPos = glm::vec3(worldX, worldY, worldZ);
+			//							//farPlane
+			//							gluUnProject(winX, winY, 1, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+			//							farPos = glm::vec3(worldX, worldY, worldZ);
+			//
+			//							vector<glm::vec3>screen;
+			//							if (models.size() >= 1)
+			//							{
+			//								for (int i = 0; i < models[0].points.size(); i++)
+			//								{
+			//									gluProject(models[0].points[i].x, models[0].points[i].y, models[0].points[i].z,
+			//										modelview, projection, viewport,
+			//										&worldX, &worldY, &worldZ);
+			//									screen.push_back(glm::vec3(worldX, worldY, worldZ));
+			//								}
+			//							}
+			//							glm::vec3 screenPoint(winX, winY, -100);
+			//
+			//				*/
+			//#pragma endregion
+			//				//vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
+			//				//glm::vec3 dir(farPos - screenPos);
+			//			//localxPos/width, localYpos/height;
+			//			double mouseX = ((width/xPos)/(width / 2))*cameraPos.x;
+			//			double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
+			//			vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z,1);
+			//			Ray rayDir(vec3(view * mousePos), rayWor);
+			//			//vec4 camerapos,1
+			//
+			//			int intersectModel = -1;
+			//			for (int i = 0; i < (int)models.size(); i++)
+			//			{
+			//				//bounding box is roughtly right height, X dimens seem off?
+			//				//raypicking needs to be redone, should be able to just check if its in bounds now.
+			//				//also box need to rotate with model
+			//				//models[i].boundBox.rayIntersects(nearPoint, direction)
+			//				//GLUnproject getting contant point regalress of position
+			//				if (models[i].box->intersect(rayDir))
+			//				{
+			//					intersectModel = i;
+			//					break;
+			//				}
+			//			}
+			//
+			//			glm::vec4 nearPoint(x, y, z, 1);
+			//			nearPoint = view * nearPoint;
+			//			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
+			//			vector<glm::vec3> pointsList;
+			//			int closest = 0;
+			//			if (intersectModel != -1)
+			//			{
+			//
+			//				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
+			//				{
+			//					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
+			//					{
+			//						closest = i;
+			//					}
+			//
+			//				}
+			//
+			//
+			//				/*printf("\nSelected Point:%f,%f,%f\n",
+			//					models[intersectModel].points[closestScreen].x,
+			//					models[intersectModel].points[closestScreen].y,
+			//					models[intersectModel].points[closestScreen].z);*/
+			//				if (intersectModel != -1 && closest != -1)
+			//				{
+			//					selectedModel = intersectModel;
+			//					selectedPoint = closest;
+			//					movementStart = vec2(localXPos, localYPos);
+			//				}
+			//				//else
+			//				//{
+			//				//	vec3 movement = screenPos - movementStart;
+			//				//	models[intersectModel].points[closest] += vec3(model * vec4(movement, 0));
+			//				//	movementStart = screenPos;
+			//				//	update = true;
+			//
+			//				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
+			//				//	/*vec3 upper = models[intersectModel].box->bounds[0];
+			//				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z
+			//				//}
+			//			}
+#pragma endregion UNDER REFACTORING
+
+			if (action == GLFW_PRESS)
 			{
 				leftPress = true;
 			}
@@ -879,10 +947,10 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				//selectedModel = selectedPoint = -1;
 				movementStart = glm::vec2(0, 0);
 
+				//}
+
 			}
-
 		}
-
 		else if (button == GLFW_MOUSE_BUTTON_2)
 		{
 			if (action == GLFW_PRESS)
@@ -895,10 +963,10 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				xPos = yPos = 0;
 			}
 		}
-	}
-#pragma endregion 
-}
 
+
+	}
+}
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -991,6 +1059,8 @@ void CheckEvents(GLFWwindow* window)
 		{
 			xPan -= (xPos - (float)localXPan) / 100;
 			yPan += (yPos - (float)localYPan) / 100;
+			culumXPan += xPan;
+			culumYPan += yPan;
 		}
 		xPos = localXPan;
 		yPos = localYPan;
