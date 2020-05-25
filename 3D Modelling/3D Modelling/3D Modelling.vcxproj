@@ -129,6 +129,7 @@
       <Command>
         xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
         xcopy /y "$(ProjDir)lib\GLEW\glew32.dll" "$(OutDir)"
+        xcopy /y "$(ProjDir)lib\GLFW\glfw3.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

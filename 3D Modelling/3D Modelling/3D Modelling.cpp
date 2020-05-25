@@ -69,7 +69,7 @@ enum ExportType
 	dae = 0,	//Can't read, unsure if working
 	obj = 4,	//incl.mat:3
 	//stl = 5,	//bin=6- Currently havng Issues: Under Review
-	ply = 7,	//bin=8
+	ply = 7,	//bin=8 loading errors?
 	//glb = 10,	//bin=11 11, might be gltf?, see stl
 	x3d = 16,	//Can't read, unsure if working
 	fbx = 18,	//bin=17
@@ -384,6 +384,11 @@ void LoadSetup(GLFWwindow* window)
 	COMDLG_FILTERSPEC aFileTypes[] = {
 		{ L"Object", L"*.obj" },
 		{ L"Stero", L"*.stl" },
+		//{ L"Polygon File", L"*.ply"},
+		{ L"Digital Asset", L"*.dae"},
+		{ L"Extensible 3D", L"*.x3d"},
+		//{ L"Filmbox", L"*.fbx"},
+		{ L"Global Module", L"*.glb"},
 		{ L"All files", L"*.*" }
 	};
 
@@ -432,6 +437,7 @@ void LoadSetup(GLFWwindow* window)
 					LoadModel();
 					ParseModels();
 					xRotation = yRotation = zRotation = 0;
+					culumXPan = culumYPan = culumScroll = 0;
 				}
 			}
 		}
@@ -524,6 +530,12 @@ void SaveSetup(GLFWwindow* window)
 	CComPtr<IFileSaveDialog> dlg;
 	COMDLG_FILTERSPEC aFileTypes[] = {
 		{ L"Object", L"*.obj" },
+		{ L"Stero", L"*.stl" },
+		//{ L"Polygon File", L"*.ply"},
+		{ L"Digital Asset", L"*.dae"},
+		{ L"Extensible 3D", L"*.x3d"},
+		//{ L"Filmbox", L"*.fbx"},
+		{ L"Global Module", L"*.glb"},
 		{ L"All files", L"*.*" }
 	};
 
@@ -1100,6 +1112,12 @@ void CheckEvents(GLFWwindow* window)
 //get camera working
 int main()
 {
+//hides console window
+	WCHAR path[265];
+	GetModuleFileName(NULL, path, 265);
+	HWND console = FindWindow(L"ConsoleWindowClass", path);
+	ShowWindow(console, SW_HIDE);
+
 #pragma region 
 	update = false;
 
@@ -1123,9 +1141,7 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	const char* glsl_version = "#version 130";
-	ImGui_ImplOpenGL3_Init(glsl_version);
-
-	printf("Finished Initilisation\n");
+	ImGui_ImplOpenGL3_Init(glsl_version);	
 #pragma endregion Setup	
 
 #pragma region
