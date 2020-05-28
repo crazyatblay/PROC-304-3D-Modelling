@@ -109,6 +109,7 @@ int selectedModel = -1, selectedPoint = -1;
 glm::vec2 movementStart;
 
 double xPos, yPos;
+float xUpdate, yUpdate, zUpdate;
 bool leftPress;
 bool rightPress;
 bool middlePress;
@@ -802,6 +803,10 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					selectedModel = intersectModel;
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
+					vec3 locl2 = models[selectedModel].points[selectedPoint];
+					xUpdate = locl2.x;
+					yUpdate = locl2.y;
+					zUpdate = locl2.z;
 				}
 			}
 
@@ -1112,7 +1117,7 @@ void CheckEvents(GLFWwindow* window)
 //get camera working
 int main()
 {
-//hides console window
+	//hides console window
 	WCHAR path[265];
 	GetModuleFileName(NULL, path, 265);
 	HWND console = FindWindow(L"ConsoleWindowClass", path);
@@ -1132,7 +1137,7 @@ int main()
 	glfwInit();
 
 	GLFWwindow* window = nullptr;
-	window = glfwCreateWindow(WindowWidth, WindowHeight, "3D Model Loading", NULL, NULL);
+	window = glfwCreateWindow(WindowWidth, WindowHeight, "Mod3D", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	glewInit();
 
@@ -1141,7 +1146,7 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	const char* glsl_version = "#version 130";
-	ImGui_ImplOpenGL3_Init(glsl_version);	
+	ImGui_ImplOpenGL3_Init(glsl_version);
 #pragma endregion Setup	
 
 #pragma region
@@ -1208,27 +1213,23 @@ int main()
 				ImGui::EndMainMenuBar();
 			}
 
-			float xVal, yVal, zVal;
-
 			if (updatePoint) {
 
 				ImGui::Begin("Move Point", &updatePoint);
 				{
 					interaction = true;
 					vec3 locl = models[selectedModel].points[selectedPoint];
-					/*xVal = locl.x;
-					yVal = locl.y;
-					zVal = locl.z;*/
+			
 					ImGui::Text("Current point:%f,%f,%f", locl.x, locl.y, locl.z);
 
-					ImGui::InputFloat("x", &xVal, 0.01f, 0.1f, "%.8f");
-					ImGui::InputFloat("y", &yVal, 0.01f, 0.1f, "%.8f");
-					ImGui::InputFloat("z", &zVal, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("X", &xUpdate, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("Y", &yUpdate, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("Z", &zUpdate, 0.01f, 0.1f, "%.8f");
 
 					bool confirm = ImGui::Button("Confirm");
 					if (confirm)
 					{
-						models[selectedModel].points[selectedPoint] = vec3(xVal, yVal, zVal);
+						models[selectedModel].points[selectedPoint] = vec3(xUpdate, yUpdate, zUpdate);						
 						selectedModel = selectedPoint = -1;
 						updatePoint = false;
 						update = true;
