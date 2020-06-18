@@ -19,18 +19,14 @@
 #include "ShaderLoad.h"
 #include "Model.h"
 
-//#include <stdlib.h>
-//#include <stdio.h>
 #include "Shobjidl.h"
 #include "atlcomcli.h"
 
 #include "lib/GLEW/glew.h"
-//#include "GL/freeglut.h"
+
 #include "lib/GLFW/glfw3.h"
 #include "lib/GLFW/glfw3native.h"
 
-
-//#include "lib/GL/glut.h" should be able to remove this folder and glut ofolder in lib?
 #include "lib/GL/glut.h"
 #include "lib/glm/glm.hpp"
 
@@ -113,6 +109,7 @@ float xUpdate, yUpdate, zUpdate;
 bool leftPress;
 bool rightPress;
 bool middlePress;
+
 bool update;
 bool interaction;
 bool updatePoint = false;
@@ -123,12 +120,6 @@ ExportType currentType;
 
 #define BUFFER_OFFSET(a)((void*)(a))
 #pragma endregion Vars
-
-class IRenderCallbacks
-{
-public:
-	virtual void DrawStartCB(unsigned int DrawIndex) = 0;
-};
 
 
 void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
@@ -450,14 +441,14 @@ aiReturn saveScene(string FileName, ExportType ex)
 {
 	/*Gets a list of all avaliable formats*/
 	const char* desc;
-	/*size_t exportNumbers = aiGetExportFormatCount();
+	size_t exportNumbers = aiGetExportFormatCount();
 	std::printf("Avaliable formats");
 	for (int i = 0; i < exportNumbers; i++)
 	{
 		desc = aiGetExportFormatDescription(i)->description;
 		printf(desc);
 		printf("%d\n", i);
-	}*/
+	}
 
 	try
 	{
@@ -510,7 +501,7 @@ aiReturn saveScene(string FileName, ExportType ex)
 				scene->mMeshes[i]->mFaces[m].mIndices = facesList[m].mIndices;
 			}
 			vecsList.clear();
-			//facesList.clear();doens't liek clearing faces? unsure why but whatever.
+			//facesList.clear();doens't like clearing faces? unsure why but whatever.
 		}
 
 		return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
@@ -592,7 +583,7 @@ void display()
 {
 	//clears existing objects
 	glClear(GL_COLOR_BUFFER_BIT);
-	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+	glClearColor(0.3f, 0.8f, 0.8f, 1.0f);
 
 	//culls back faces
 	glEnable(GL_CULL_FACE);//keep only this
@@ -737,6 +728,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 #pragma region
 	if (selectedModel != -1 && selectedPoint != -1)
 	{
+		interaction = false;
 		updatePoint = (selectedModel != -1 && selectedPoint != -1);//????
 
 		/*ImGui_ImplOpenGL3_NewFrame();
@@ -759,7 +751,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 	}
 
-	if (interaction && localYPos > 17.5)
+	if (!interaction && localYPos > 17.5)
 	{//middle
 		if (button == GLFW_MOUSE_BUTTON_MIDDLE)
 		{
@@ -788,7 +780,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			int closest = 0;
 			if (intersectModel != -1)
 			{
-
+				interaction = true;
 				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 				{
 					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
@@ -956,7 +948,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			{
 				leftPress = true;
 			}
-			else if (action == GLFW_RELEASE)
+			else //if (action == GLFW_RELEASE)
 			{
 				leftPress = false;
 				rightPress = false;
@@ -1037,7 +1029,6 @@ void CheckEvents(GLFWwindow* window)
 		rightPress = false;
 		localXRotate = localYRotate = 0;
 
-		//glfwSetCursorPos(window, 100, 100);
 		glfwGetCursorPos(window, &localXRotate, &localYRotate);
 		if (xPos != 0 && yPos != 0)
 		{
@@ -1105,16 +1096,11 @@ void CheckEvents(GLFWwindow* window)
 		cameraPos.x = min(max(cameraPos.x, -5), 5);
 		cameraPos.y = min(max(cameraPos.y, -5), 5);
 		cameraPos.z = min(max(cameraPos.z, -5), 5);
-		//xRotation = yRotation = 0;
+		xRotation = yRotation = 0;
 		glm::mat4 Tin = translate(mat4(1.0f), cameraPos);
-		//model = scale(model, vec3(0.25, 0.25, 0.25));
-		//view = inverse(rotationMatrix) * inverse(Tin);
 	}
 }
 
-
-
-//get camera working
 int main()
 {
 	//hides console window
@@ -1159,6 +1145,7 @@ int main()
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	static float xMove, yMove, zMove =0.0f;
 	while (!glfwWindowShouldClose(window))
 	{
 		if (update)
@@ -1180,11 +1167,8 @@ int main()
 		{
 			if (ImGui::BeginMainMenuBar())
 			{
-
 				if (ImGui::BeginMenu("File"))
 				{
-					interaction = false;
-
 					//using window, need to add all options to filter.
 					if (ImGui::MenuItem("Load"))
 					{
@@ -1195,52 +1179,57 @@ int main()
 					{
 						SaveSetup(window);
 					}
-
-					//ImGui::Separator();
-					//if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-					//if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-					//ImGui::Separator();
-					//if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-					//if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-					//if (ImGui::MenuItem("Paste", "CTRL+V")) {}
 					ImGui::EndMenu();
 				}
-				else
-				{
-					interaction = true;
-				}
-
+		
 				ImGui::EndMainMenuBar();
 			}
 
 			if (updatePoint) {
-
+			
 				ImGui::Begin("Move Point", &updatePoint);
 				{
-					interaction = true;
+					ImGui::Columns(3, "layout", true);
+					
 					vec3 locl = models[selectedModel].points[selectedPoint];
-			
-					ImGui::Text("Current point:%f,%f,%f", locl.x, locl.y, locl.z);
 
+					ImGui::Text("Current point:%f,%f,%f", locl.x, locl.y, locl.z);
+					ImGui::Separator();
 					ImGui::InputFloat("X", &xUpdate, 0.01f, 0.1f, "%.8f");
 					ImGui::InputFloat("Y", &yUpdate, 0.01f, 0.1f, "%.8f");
 					ImGui::InputFloat("Z", &zUpdate, 0.01f, 0.1f, "%.8f");
 
-					bool confirm = ImGui::Button("Confirm");
-					if (confirm)
+					bool setPoint = ImGui::Button("Confirm");
+					if (setPoint)
 					{
-						models[selectedModel].points[selectedPoint] = vec3(xUpdate, yUpdate, zUpdate);						
+						models[selectedModel].points[selectedPoint] = vec3(xUpdate, yUpdate, zUpdate);
 						selectedModel = selectedPoint = -1;
 						updatePoint = false;
 						update = true;
-						interaction = true;
 					}
+					ImGui::NextColumn();
+					
+					ImGui::InputFloat("XMove", &xMove, 0.01f, 0.1f, "%.1f");
+					ImGui::InputFloat("YMove", &yMove, 0.01f, 0.1f, "%.1f");
+					ImGui::InputFloat("ZMove", &zMove, 0.01f, 0.1f, "%.1f");
+					bool movePoint = ImGui::Button("Move");
+					if (movePoint)
+					{
+						vec3 selectedLocal = models[selectedModel].points[selectedPoint];
+						selectedLocal.x = selectedLocal.x + xMove;
+						selectedLocal.y = selectedLocal.y + yMove;
+						selectedLocal.z = selectedLocal.z + zMove;
+						models[selectedModel].points[selectedPoint] = selectedLocal;
+						selectedModel = selectedPoint = -1;
+						updatePoint = false;
+						update = true;
+					}
+					ImGui::NextColumn();
 					bool cancel = ImGui::Button("Cancel");
 					if (cancel)
 					{
 						selectedModel = selectedPoint = -1;
-						updatePoint = false;
-						interaction = true;
+						updatePoint = false;						
 					}
 				}
 
