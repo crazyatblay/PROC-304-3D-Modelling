@@ -72,7 +72,7 @@ enum ExportType
 };
 
 #pragma region
-enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 1 };
+enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 2 };
 enum Buffer_IDs { ArrayBuffer, NumBuffers = 3 };
 enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2 };
 
@@ -193,16 +193,36 @@ void LoadModel()
 		}
 	}
 
-	vector<glm::vec3> glmVerticies;
-
-	vector<GLuint> indicies = Conversion::parseAIFaces(facesList);
-
+	vector<glm::vec3> lookupList, glmVerticies;
+	bool repeated = false;
+	
 	for (int i = 0; i < (int)verticiesList.size(); i++)
 	{
-		glmVerticies.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
+		lookupList.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
+		if (lookupList[i] == lookupList[0] && i == (verticiesList.size() / 3))
+		{
+			repeated = true;			
+		}
+		if (i < (verticiesList.size() / 3) + 1)
+		{
+			glmVerticies.push_back(lookupList[i]);
+			if ((i == verticiesList.size() / 3) && (lookupList[i] == glmVerticies[0]))
+			{
+				glmVerticies.pop_back();
+			}
+
+		}
 	}
 
-
+	vector<GLuint> indicies = Conversion::parseAIFaces(facesList);
+	if (repeated)
+	{
+		indicies = Conversion::lookupSort(lookupList, indicies);
+	}
+	else
+	{
+		glmVerticies = lookupList;
+	}
 	//check if position lies at max
 
 	glm::vec3 pointMin, pointMax;
@@ -1145,7 +1165,7 @@ int main()
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	static float xMove, yMove, zMove =0.0f;
+	static float xMove, yMove, zMove = 0.0f;
 	while (!glfwWindowShouldClose(window))
 	{
 		if (update)
@@ -1181,19 +1201,19 @@ int main()
 					}
 					ImGui::EndMenu();
 				}
-		
+
 				ImGui::EndMainMenuBar();
 			}
 
 			if (updatePoint) {
-			
+
 				ImGui::Begin("Move Point", &updatePoint);
 				{
 					ImGui::Columns(3, "layout", true);
-					
+
 					vec3 locl = models[selectedModel].points[selectedPoint];
 
-					ImGui::Text("Current point:%f,%f,%f", locl.x, locl.y, locl.z);
+					ImGui::Text("Current point:\nX:%f\nY:%f\nZ:%f", locl.x, locl.y, locl.z);
 					ImGui::Separator();
 					ImGui::InputFloat("X", &xUpdate, 0.01f, 0.1f, "%.8f");
 					ImGui::InputFloat("Y", &yUpdate, 0.01f, 0.1f, "%.8f");
@@ -1208,7 +1228,7 @@ int main()
 						update = true;
 					}
 					ImGui::NextColumn();
-					
+
 					ImGui::InputFloat("XMove", &xMove, 0.01f, 0.1f, "%.1f");
 					ImGui::InputFloat("YMove", &yMove, 0.01f, 0.1f, "%.1f");
 					ImGui::InputFloat("ZMove", &zMove, 0.01f, 0.1f, "%.1f");
@@ -1229,7 +1249,7 @@ int main()
 					if (cancel)
 					{
 						selectedModel = selectedPoint = -1;
-						updatePoint = false;						
+						updatePoint = false;
 					}
 				}
 

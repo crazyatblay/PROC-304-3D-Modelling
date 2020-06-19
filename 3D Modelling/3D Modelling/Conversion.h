@@ -16,6 +16,7 @@ using namespace glm;
 class Conversion
 {
 public:
+	static std::vector<GLuint> lookupSort(std::vector<vec3>lookup, std::vector<GLuint>indicies);
 	static std::vector<GLuint> parseAIFaces(std::vector<aiFace*> faces);
 	static std::vector<aiFace> parseGLMIndicies(std::vector<GLuint> indicies);
 	static vec3 Vec3ConversionAi(aiVector3D* vecIn);

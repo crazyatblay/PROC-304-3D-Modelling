@@ -1,6 +1,9 @@
 ///Simple File to deal with conversion of values between Assimp & GLM
 
+#include<map>
+
 #include "Conversion.h"
+
 
 
 vec3 Conversion::Vec3ConversionAi(aiVector3D* vecIn)
@@ -14,16 +17,66 @@ aiVector3D Conversion::Vec3ConversionGLM(vec3 vecIn)
 {
 	return aiVector3D(vecIn.x, vecIn.y, vecIn.z);
 }
+//
+//std::vector<GLuint> lookupSort(std::vector<glm::vec3>lookup, std::vector<GLuint>indicies)
+//{
+//	int startVal = lookup.size() / 3;
+//	for (int i = startVal; i < indicies.size(); i++)
+//	{
+//		int point = indicies[i];
+//		for (int j = 0; j < startVal; j++)
+//		{
+//			if (lookup[i] == lookup[j])
+//			{
+//				indicies[i] = j;
+//			}
+//		}
+//
+//	}
+//	return indicies;
+//}
 
+
+std::vector<GLuint> Conversion::lookupSort(std::vector<vec3> lookup, std::vector<GLuint> indicies)
+{
+	int startVal = lookup.size() / 3;
+	std::vector<int>table;
+	table.resize(lookup.size());
+
+	for (int i = startVal; i < lookup.size(); i++)
+	{
+		vec3 point = lookup[i];
+
+		for (int j = 0; j < startVal; j++)
+		{
+			if (point == lookup[j])
+			{
+				table[i] = j;
+				break;
+			}
+		}
+	}
+
+
+	for (int i = indicies.size() / 3; i < indicies.size(); i++)
+	{
+		indicies[i] = table[indicies[i]];
+	}
+
+	return indicies;
+}
 
 std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
 {
 	std::vector<GLuint> ind;
+
+
 	for (int i = 0; i < faces.size(); i++)
 	{
 		for (unsigned int j = 0; j < faces[i]->mNumIndices; j++)
 		{
 			unsigned int locInd = faces[i]->mIndices[j];
+
 			ind.push_back(locInd);
 		}
 	}
