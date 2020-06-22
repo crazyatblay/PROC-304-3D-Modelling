@@ -31,6 +31,7 @@
 #include "lib/glm/glm.hpp"
 
 #include <assimp/cimport.h>
+#include <assimp/Importer.hpp>
 #include <assimp/cexport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -63,7 +64,8 @@ enum ExportType
 {
 	none = -1,	//Used for Unrecognised formats
 	dae = 0,	//Can't read, unsure if working
-	obj = 4,	//incl.mat:3
+	objMat = 3,
+	obj = 4,
 	//stl = 5,	//bin=6- Currently havng Issues: Under Review
 	ply = 7,	//bin=8 loading errors?
 	//glb = 10,	//bin=11 11, might be gltf?, see stl
@@ -72,7 +74,7 @@ enum ExportType
 };
 
 #pragma region
-enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 2 };
+enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 1 };
 enum Buffer_IDs { ArrayBuffer, NumBuffers = 3 };
 enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2 };
 
@@ -161,11 +163,14 @@ void LoadModel()
 {
 	vector<aiMesh*> meshList;
 	vector<aiFace*> facesList;
+	vector<aiMaterial*> textureList;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
 	{
 
 		aiMesh* meshes = scene->mMeshes[i];
 		meshList.push_back(meshes);
+		aiMaterial* materials = scene->mMaterials[i];
+		textureList.push_back(materials);
 		//meshes->mNumVertices
 	}
 	//list<aiVector3D> verticies;
@@ -179,8 +184,14 @@ void LoadModel()
 		if (meshList.front()->mNumVertices > 0)
 		{
 			aiMesh* temp = meshList.front();
+			aiMaterial* mat = textureList.front();
+			aiString texture;
+			aiString path;
+			texture.Set("*****************");
+			aiReturn res= mat->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL);
+			res = mat->GetTexture(aiTextureType_SPECULAR, 0, &texture, NULL, NULL, NULL, NULL, NULL);
 
-			//verticiesList.push_front(meshList.front()->mVertices);
+			string testure = path.data;
 			for (unsigned int j = 0; j < temp->mNumVertices; j++)
 			{
 				verticiesList.push_back(&temp->mVertices[j]);
@@ -195,13 +206,13 @@ void LoadModel()
 
 	vector<glm::vec3> lookupList, glmVerticies;
 	bool repeated = false;
-	
+
 	for (int i = 0; i < (int)verticiesList.size(); i++)
 	{
 		lookupList.push_back(Conversion::Vec3ConversionAi(verticiesList[i]));
 		if (lookupList[i] == lookupList[0] && i == (verticiesList.size() / 3))
 		{
-			repeated = true;			
+			repeated = true;
 		}
 		if (i < (verticiesList.size() / 3) + 1)
 		{
@@ -440,6 +451,8 @@ void LoadSetup(GLFWwindow* window)
 				}
 				string path = filePath + fileName + fileExt;
 				scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+				Assimp::Importer importer;
+				scene = importer.ReadFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 				if (scene == nullptr)
 				{
 					MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
