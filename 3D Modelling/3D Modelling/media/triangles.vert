@@ -3,12 +3,12 @@
 layout( location = 0 ) in vec3 vPosition;
 layout( location = 1 ) in vec4 vColour;
 //layout( location = 2 ) in vec3 vNormal;
-
+layout (location =3) in vec2 tPosition;
 uniform mat4 mv_matrix;
 uniform mat4 p_matrix;
 
 out vec4 fragColour;
-
+out vec2 TexCoord;
 void
 main()
 {
@@ -28,4 +28,5 @@ main()
       
 	//fragColour=vColour;
 	fragColour = vec4(0.9, 0.9, 0.9, 1);
+	TexCoord=tPosition;
 }

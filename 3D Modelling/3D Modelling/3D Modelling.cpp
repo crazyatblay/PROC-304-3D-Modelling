@@ -1,7 +1,9 @@
+#define STB_IMAGE_IMPLEMENTATION
 #if defined(NANOGUI_GLAD)
 #if defined(NANOGUI_SHARED) && !defined(GLAD_GLAPI_EXPORT)
 #define GLAD_GLAPI_EXPORT
 #endif
+
 #prgama message("ProjDir == " ProjDir)
 #include <glad/glad.h>
 #else
@@ -29,6 +31,8 @@
 
 #include "lib/GL/glut.h"
 #include "lib/glm/glm.hpp"
+
+#include "lib/stb/stb_image.h"
 
 #include <assimp/cimport.h>
 #include <assimp/Importer.hpp>
@@ -74,9 +78,9 @@ enum ExportType
 };
 
 #pragma region
-enum VAO_IDs { Triangles, Colours, Normals, NumVAOs = 1 };
-enum Buffer_IDs { ArrayBuffer, NumBuffers = 3 };
-enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2 };
+enum VAO_IDs { Triangles, Colours, Normals, Tex, NumVAOs = 1 };
+enum Buffer_IDs { ArrayBuffer, NumBuffers = 4 };
+enum Attrib_IDs { vPosition = 0, cPosition = 1, vNormal = 2, tPosition = 3 };
 
 GLuint VAO[NumVAOs];
 
@@ -86,6 +90,7 @@ GLuint NumVertices = 0;
 GLuint program;
 const aiScene* scene;
 vector<Model> models;
+GLuint texture1;
 
 glm::vec3 sphere_pos_wor[] = { glm::vec3(-2.0, 0.0, 0.0), glm::vec3(2.0, 0.0, 0.0), glm::vec3(-2.0, 0.0, -2.0), glm::vec3(1.5, 1.0, -1.0) };
 const float sphere_radius = 1.0f;
@@ -159,11 +164,38 @@ void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
 	Min.z = z[minZ];
 }
 
+
+void LoadTexture(Model model)
+{
+
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1);	// set the texture wrapping parameters	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);// set texture wrapping to GL_REPEAT (default wrapping method)	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);// set texture filtering parameters	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);// load image, create texture and generate mipmaps	
+
+	GLint width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true); //tell stb_image.h to flip loaded texture's on the y-axis.	
+	string path = model.textureFile;
+	unsigned char* data = stbi_load(path.data(), &width, &height, &nrChannels, 0);
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else { std::cout << "Failed to load texture" << std::endl; }
+
+	stbi_image_free(data);
+	glUniform1i(glGetUniformLocation(program, "texture1"), 0);// creating the model matrix
+}
+
 void LoadModel()
 {
 	vector<aiMesh*> meshList;
 	vector<aiFace*> facesList;
 	vector<aiMaterial*> textureList;
+	vector<aiVector3D*> texCords;
+	string path;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
 	{
 
@@ -186,15 +218,26 @@ void LoadModel()
 			aiMesh* temp = meshList.front();
 			aiMaterial* mat = textureList.front();
 			aiString texture;
-			aiString path;
-			texture.Set("*****************");
-			aiReturn res= mat->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL);
-			res = mat->GetTexture(aiTextureType_SPECULAR, 0, &texture, NULL, NULL, NULL, NULL, NULL);
+			aiString loc;
+			path = filePath;
+			GLint width, height, nrChannels;
 
-			string testure = path.data;
+			aiReturn res = mat->GetTexture(aiTextureType_DIFFUSE, 0, &loc, NULL, NULL, NULL, NULL, NULL);
+			path.append(loc.C_Str());
+
+			/*	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+				if (data)
+				{
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+					glGenerateMipmap(GL_TEXTURE_2D);
+				}*/
+
+			
 			for (unsigned int j = 0; j < temp->mNumVertices; j++)
 			{
 				verticiesList.push_back(&temp->mVertices[j]);
+				aiVector3D* convert = &temp->mTextureCoords[0][j];
+				texCords.push_back(convert);
 			}
 			for (unsigned int j = 0; j < temp->mNumFaces; j++)
 			{
@@ -202,7 +245,9 @@ void LoadModel()
 			}
 
 		}
+
 	}
+
 
 	vector<glm::vec3> lookupList, glmVerticies;
 	bool repeated = false;
@@ -243,7 +288,8 @@ void LoadModel()
 	//{
 	//	glmVerticies[i].y -= height / 2;
 	//}
-	Model newModel(glmVerticies, indicies, pointMax, pointMin);
+	Model newModel(glmVerticies, indicies, path, pointMax, pointMin);
+	LoadTexture(newModel);
 	models.push_back(newModel);
 	indicies.clear();
 	glmVerticies.clear();
