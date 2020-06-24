@@ -70,13 +70,12 @@ std::vector<GLuint> Conversion::parseAIFaces(std::vector<aiFace*> faces)
 {
 	std::vector<GLuint> ind;
 
-
 	for (int i = 0; i < faces.size(); i++)
 	{
 		for (unsigned int j = 0; j < faces[i]->mNumIndices; j++)
 		{
 			unsigned int locInd = faces[i]->mIndices[j];
-
+			
 			ind.push_back(locInd);
 		}
 	}

@@ -5,11 +5,16 @@
 AABBox* box;
 std::vector<glm::vec3> points;
 std::vector<GLuint> indicies;
+	std::vector<glm::vec2> textureUvs;
 
-Model::Model(std::vector<glm::vec3> input, std::vector<GLuint> ind, std::string path, glm::vec3 max, glm::vec3 min)
+
+	
+Model::Model(std::vector<glm::vec3> input, std::vector<GLuint> ind, std::vector<glm::vec2> textures, std::string path, glm::vec3 max, glm::vec3 min)
 {
 	indicies = ind;
 	points = input;
+	textureUvs = textures;
+
 	//boundBox = BoundingBox(input);
 	box = new AABBox(max, min);
 	textureFile = path;

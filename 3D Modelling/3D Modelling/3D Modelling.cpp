@@ -91,6 +91,7 @@ GLuint program;
 const aiScene* scene;
 vector<Model> models;
 GLuint texture1;
+vector<GLuint> tempTest;
 
 glm::vec3 sphere_pos_wor[] = { glm::vec3(-2.0, 0.0, 0.0), glm::vec3(2.0, 0.0, 0.0), glm::vec3(-2.0, 0.0, -2.0), glm::vec3(1.5, 1.0, -1.0) };
 const float sphere_radius = 1.0f;
@@ -165,8 +166,12 @@ void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
 }
 
 
-void LoadTexture(Model model)
+void LoadTexture(Model model, vector<glm::vec2> finalTexture)
 {
+	glBindBuffer(GL_ARRAY_BUFFER, Buffers[Tex]);
+	glBufferData(GL_ARRAY_BUFFER, finalTexture.size() * sizeof(glm::vec2), finalTexture.data(), GL_STATIC_DRAW);
+
+	glVertexAttribPointer(tPosition, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));	// load and create a texture 
 
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1);	// set the texture wrapping parameters	
@@ -194,28 +199,26 @@ void LoadModel()
 	vector<aiMesh*> meshList;
 	vector<aiFace*> facesList;
 	vector<aiMaterial*> textureList;
-	vector<aiVector3D*> texCords;
+	vector<glm::vec2> texCords;
 	string path;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
 	{
 
 		aiMesh* meshes = scene->mMeshes[i];
 		meshList.push_back(meshes);
+		
 		aiMaterial* materials = scene->mMaterials[i];
 		textureList.push_back(materials);
-		//meshes->mNumVertices
 	}
-	//list<aiVector3D> verticies;
-	//meshes.push_back(scene->mMeshes);
 
 	vector<aiVector3D*> verticiesList;
 
 	for (int i = 0; i < meshList.size(); i++)
 	{
-		//aiVector3D verticies = meshList[i]->mVertices;
 		if (meshList.front()->mNumVertices > 0)
 		{
 			aiMesh* temp = meshList.front();
+
 			aiMaterial* mat = textureList.front();
 			aiString texture;
 			aiString loc;
@@ -225,6 +228,7 @@ void LoadModel()
 			aiReturn res = mat->GetTexture(aiTextureType_DIFFUSE, 0, &loc, NULL, NULL, NULL, NULL, NULL);
 			path.append(loc.C_Str());
 
+
 			/*	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
 				if (data)
 				{
@@ -232,12 +236,13 @@ void LoadModel()
 					glGenerateMipmap(GL_TEXTURE_2D);
 				}*/
 
-			
+
 			for (unsigned int j = 0; j < temp->mNumVertices; j++)
 			{
 				verticiesList.push_back(&temp->mVertices[j]);
 				aiVector3D* convert = &temp->mTextureCoords[0][j];
-				texCords.push_back(convert);
+
+				texCords.push_back(Conversion::Vec3ConversionAi(convert));
 			}
 			for (unsigned int j = 0; j < temp->mNumFaces; j++)
 			{
@@ -247,7 +252,6 @@ void LoadModel()
 		}
 
 	}
-
 
 	vector<glm::vec3> lookupList, glmVerticies;
 	bool repeated = false;
@@ -269,8 +273,9 @@ void LoadModel()
 
 		}
 	}
-
+	verticiesList.clear();
 	vector<GLuint> indicies = Conversion::parseAIFaces(facesList);
+	tempTest = indicies;
 	if (repeated)
 	{
 		indicies = Conversion::lookupSort(lookupList, indicies);
@@ -288,11 +293,16 @@ void LoadModel()
 	//{
 	//	glmVerticies[i].y -= height / 2;
 	//}
-	Model newModel(glmVerticies, indicies, path, pointMax, pointMin);
-	LoadTexture(newModel);
+
+
+	Model newModel(glmVerticies, indicies, texCords, path, pointMax, pointMin);
+
 	models.push_back(newModel);
 	indicies.clear();
 	glmVerticies.clear();
+	meshList.clear();
+	facesList.clear();
+	textureList.clear();
 
 }
 
@@ -317,12 +327,14 @@ void ParseModels()
 	glUseProgram(program);
 
 	vector<glm::vec3> finalPoints;
+	vector<glm::vec2> finalTexture;
 
 	for (int j = 0; j < (int)models.size(); j++)
 	{
 		for (int i = 0; i < (int)models[j].indicies.size(); i++)
 		{
 			finalPoints.push_back(models[j].points[models[j].indicies[i]]);
+			finalTexture.push_back(models[j].textureUvs[tempTest[i]]);
 		}
 	}
 
@@ -335,6 +347,9 @@ void ParseModels()
 	glBufferData(GL_ARRAY_BUFFER, finalPoints.size() * sizeof(glm::vec3), finalPoints.data(), GL_STATIC_DRAW);
 
 	glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+
+	LoadTexture(models[0], finalTexture);
 
 	//MVP creation
 	model = glm::mat4(1.0f);
@@ -358,6 +373,7 @@ void ParseModels()
 	//enables vertex arrays for verticies, colours, and normals
 	glEnableVertexAttribArray(vPosition);
 	glEnableVertexAttribArray(cPosition);
+	glEnableVertexAttribArray(tPosition);
 	//glEnableVertexAttribArray(vNormal);
 
 	finalPoints.clear();
@@ -496,7 +512,7 @@ void LoadSetup(GLFWwindow* window)
 					return;
 				}
 				string path = filePath + fileName + fileExt;
-				scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+				//scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 				Assimp::Importer importer;
 				scene = importer.ReadFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 				if (scene == nullptr)
@@ -510,6 +526,7 @@ void LoadSetup(GLFWwindow* window)
 					xRotation = yRotation = zRotation = 0;
 					culumXPan = culumYPan = culumScroll = 0;
 				}
+				
 			}
 		}
 	}
@@ -712,7 +729,7 @@ void display()
 	//adding the Uniform to the shader
 	int pLoc = glGetUniformLocation(program, "p_matrix");
 	glUniformMatrix4fv(pLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
+	glBindTexture(GL_TEXTURE_2D, texture1);
 
 	glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
@@ -1337,8 +1354,6 @@ int main()
 	ImGui::DestroyContext();
 
 	aiReleaseImport(scene);
-
-	aiDetachAllLogStreams();
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
