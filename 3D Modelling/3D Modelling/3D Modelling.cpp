@@ -206,7 +206,7 @@ void LoadModel()
 
 		aiMesh* meshes = scene->mMeshes[i];
 		meshList.push_back(meshes);
-		
+
 		aiMaterial* materials = scene->mMaterials[i];
 		textureList.push_back(materials);
 	}
@@ -225,9 +225,19 @@ void LoadModel()
 			path = filePath;
 			GLint width, height, nrChannels;
 
-			aiReturn res = mat->GetTexture(aiTextureType_DIFFUSE, 0, &loc, NULL, NULL, NULL, NULL, NULL);
-			path.append(loc.C_Str());
-
+			if (AI_SUCCESS == mat->GetTexture(aiTextureType_DIFFUSE, 0, &loc, NULL, NULL, NULL, NULL, NULL))
+			{
+				path.append(loc.C_Str());
+			}
+			else
+			{
+				path = "media/3DFillerBoxes.png";
+				aiString locConv = (aiString)path;
+				aiTextureMapping map;
+				GLuint result;
+				glGenTextures(1, &result);
+			
+			}
 
 			/*	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
 				if (data)
@@ -236,21 +246,22 @@ void LoadModel()
 					glGenerateMipmap(GL_TEXTURE_2D);
 				}*/
 
-
+			
 			for (unsigned int j = 0; j < temp->mNumVertices; j++)
 			{
 				verticiesList.push_back(&temp->mVertices[j]);
-				aiVector3D* convert = &temp->mTextureCoords[0][j];
-
-				texCords.push_back(Conversion::Vec3ConversionAi(convert));
+				if (&temp->mTextureCoords[0][0] != NULL)
+				{
+					aiVector3D* convert = &temp->mTextureCoords[0][j];
+					
+					texCords.push_back(Conversion::Vec3ConversionAi(convert));
+				}
 			}
 			for (unsigned int j = 0; j < temp->mNumFaces; j++)
 			{
 				facesList.push_back(&temp->mFaces[j]);
 			}
-
 		}
-
 	}
 
 	vector<glm::vec3> lookupList, glmVerticies;
@@ -328,13 +339,18 @@ void ParseModels()
 
 	vector<glm::vec3> finalPoints;
 	vector<glm::vec2> finalTexture;
+	bool existingTexture = false;
 
 	for (int j = 0; j < (int)models.size(); j++)
 	{
 		for (int i = 0; i < (int)models[j].indicies.size(); i++)
 		{
 			finalPoints.push_back(models[j].points[models[j].indicies[i]]);
-			finalTexture.push_back(models[j].textureUvs[tempTest[i]]);
+			if (models[j].textureUvs.size() > 0)
+			{
+				existingTexture = true;
+				finalTexture.push_back(models[j].textureUvs[tempTest[i]]);
+			}
 		}
 	}
 
@@ -371,9 +387,12 @@ void ParseModels()
 	glUniformMatrix4fv(pLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	//enables vertex arrays for verticies, colours, and normals
-	glEnableVertexAttribArray(vPosition);
+	glEnableVertexAttribArray(vPosition);	
 	glEnableVertexAttribArray(cPosition);
-	glEnableVertexAttribArray(tPosition);
+	if (existingTexture)
+	{
+		glEnableVertexAttribArray(tPosition);
+	}
 	//glEnableVertexAttribArray(vNormal);
 
 	finalPoints.clear();
@@ -512,7 +531,7 @@ void LoadSetup(GLFWwindow* window)
 					return;
 				}
 				string path = filePath + fileName + fileExt;
-				//scene = aiImportFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+
 				Assimp::Importer importer;
 				scene = importer.ReadFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 				if (scene == nullptr)
@@ -526,7 +545,7 @@ void LoadSetup(GLFWwindow* window)
 					xRotation = yRotation = zRotation = 0;
 					culumXPan = culumYPan = culumScroll = 0;
 				}
-				
+
 			}
 		}
 	}
@@ -892,9 +911,9 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
 					vec3 locl2 = models[selectedModel].points[selectedPoint];
-					xUpdate = locl2.x;
-					yUpdate = locl2.y;
-					zUpdate = locl2.z;
+					xUpdate = cameraPos.x;//locl2.x;
+					yUpdate = cameraPos.y;//locl2.y;
+					zUpdate = cameraPos.z; //locl2.z;
 				}
 			}
 
@@ -1085,6 +1104,22 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		LoadSetup(window);
 	}
 
+	if (key == GLFW_KEY_W)
+	{
+		cameraPos.y += 0.1;
+	}
+	if (key == GLFW_KEY_S)
+	{
+		cameraPos.y -= 0.1;
+	}
+	if (key == GLFW_KEY_A)
+	{
+		cameraPos.x -= 0.1;
+	}
+	if (key == GLFW_KEY_D)
+	{
+		cameraPos.x += 0.1;
+	}
 
 	if (key == GLFW_KEY_SPACE)
 	{

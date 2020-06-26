@@ -8,6 +8,10 @@
 
 vec3 Conversion::Vec3ConversionAi(aiVector3D* vecIn)
 {
+	if (vecIn == NULL)
+	{
+		return vec3(NULL);
+	}
 	aiVector3D vecLocal = *vecIn;
 
 	return vec3(vecLocal.x, vecLocal.y, vecLocal.z);
