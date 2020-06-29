@@ -12,4 +12,5 @@ void main()
 	fColor=fragColour;
 
 	fColor= texture(ourTexture, TexCoord);
+	fColor=fColor*fragColour;
 }	

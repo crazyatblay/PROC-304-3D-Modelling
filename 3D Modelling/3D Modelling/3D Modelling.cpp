@@ -194,6 +194,20 @@ void LoadTexture(Model model, vector<glm::vec2> finalTexture)
 	glUniform1i(glGetUniformLocation(program, "texture1"), 0);// creating the model matrix
 }
 
+void LoadColour()
+{
+	GLuint colo;
+	glGenBuffers(1, &colo);
+	glBindBuffer(GL_ARRAY_BUFFER, colo);
+	static const GLfloat data[] = {
+		0.5f, 0.5f, 0.5f, 1.0f
+	};
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat), &data, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, colo);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+}
+
 void LoadModel()
 {
 	vector<aiMesh*> meshList;
@@ -236,7 +250,7 @@ void LoadModel()
 				aiTextureMapping map;
 				GLuint result;
 				glGenTextures(1, &result);
-			
+
 			}
 
 			/*	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
@@ -246,15 +260,33 @@ void LoadModel()
 					glGenerateMipmap(GL_TEXTURE_2D);
 				}*/
 
-			
-			for (unsigned int j = 0; j < temp->mNumVertices; j++)
+			bool black = false;
+			unsigned int numVerticiesLocal = temp->mNumVertices;
+			for (unsigned int j = 0; j < numVerticiesLocal; j++)
 			{
 				verticiesList.push_back(&temp->mVertices[j]);
 				if (&temp->mTextureCoords[0][0] != NULL)
 				{
 					aiVector3D* convert = &temp->mTextureCoords[0][j];
-					
+
 					texCords.push_back(Conversion::Vec3ConversionAi(convert));
+				}
+				else
+				{
+					vec2 val;
+					if (j %16 == 0)
+					{
+						black = !black;
+					}
+					if (black)
+					{					
+						val = vec2(0.1, 0.1);
+					}
+					else
+					{
+						val = vec2(0.9,0.9);
+					}
+					texCords.push_back(val);
 				}
 			}
 			for (unsigned int j = 0; j < temp->mNumFaces; j++)
@@ -364,8 +396,14 @@ void ParseModels()
 
 	glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
 
-
-	LoadTexture(models[0], finalTexture);
+	if (existingTexture)
+	{
+		LoadTexture(models[0], finalTexture);
+	}
+	else
+	{
+		LoadColour();
+	}
 
 	//MVP creation
 	model = glm::mat4(1.0f);
@@ -387,7 +425,7 @@ void ParseModels()
 	glUniformMatrix4fv(pLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	//enables vertex arrays for verticies, colours, and normals
-	glEnableVertexAttribArray(vPosition);	
+	glEnableVertexAttribArray(vPosition);
 	glEnableVertexAttribArray(cPosition);
 	if (existingTexture)
 	{
@@ -396,6 +434,7 @@ void ParseModels()
 	//glEnableVertexAttribArray(vNormal);
 
 	finalPoints.clear();
+	finalTexture.clear();
 }
 
 string compareOutput(ExportType type)
@@ -910,10 +949,10 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					selectedModel = intersectModel;
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
-					vec3 locl2 = models[selectedModel].points[selectedPoint];
-					xUpdate = cameraPos.x;//locl2.x;
-					yUpdate = cameraPos.y;//locl2.y;
-					zUpdate = cameraPos.z; //locl2.z;
+					vec3 pointData = models[selectedModel].points[selectedPoint];
+					xUpdate = pointData.x;
+					yUpdate = pointData.y;
+					zUpdate = pointData.z;
 				}
 			}
 
@@ -1235,10 +1274,10 @@ void CheckEvents(GLFWwindow* window)
 int main()
 {
 	//hides console window
-	WCHAR path[265];
-	GetModuleFileName(NULL, path, 265);
-	HWND console = FindWindow(L"ConsoleWindowClass", path);
-	ShowWindow(console, SW_HIDE);
+	//WCHAR path[265];
+	//GetModuleFileName(NULL, path, 265);
+	//HWND console = FindWindow(L"ConsoleWindowClass", path);
+	//ShowWindow(console, SW_HIDE);
 
 #pragma region 
 	update = false;
