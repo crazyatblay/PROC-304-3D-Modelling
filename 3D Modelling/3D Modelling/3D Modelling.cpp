@@ -92,6 +92,7 @@ const aiScene* scene;
 vector<Model> models;
 GLuint texture1;
 vector<GLuint> tempTest;
+vector<GLfloat> colourData;
 
 glm::vec3 sphere_pos_wor[] = { glm::vec3(-2.0, 0.0, 0.0), glm::vec3(2.0, 0.0, 0.0), glm::vec3(-2.0, 0.0, -2.0), glm::vec3(1.5, 1.0, -1.0) };
 const float sphere_radius = 1.0f;
@@ -193,19 +194,34 @@ void LoadTexture(Model model, vector<glm::vec2> finalTexture)
 	stbi_image_free(data);
 	glUniform1i(glGetUniformLocation(program, "texture1"), 0);// creating the model matrix
 }
-
+//works with cubes
 void LoadColour()
 {
-	GLuint colo;
-	glGenBuffers(1, &colo);
-	glBindBuffer(GL_ARRAY_BUFFER, colo);
-	static const GLfloat data[] = {
-		0.5f, 0.5f, 0.5f, 1.0f
+	GLfloat  colours[][4] = {
+		{ 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f },
+		{ 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f },
+
+		{ 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f },
+		{ 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f },
+
+		{ 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f },
+		{ 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f },
+
+		{ 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f },
+		{ 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f },
+
+		{ 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f },
+		{ 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f },
+
+		{ 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f },
+		{ 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f },
+
 	};
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat), &data, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, colo);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, Buffers[Colours]);
+
+	glBufferStorage(GL_ARRAY_BUFFER, sizeof(colours), &colours, 0);
+
+	glVertexAttribPointer(cPosition, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
 }
 
 void LoadModel()
@@ -270,24 +286,16 @@ void LoadModel()
 					aiVector3D* convert = &temp->mTextureCoords[0][j];
 
 					texCords.push_back(Conversion::Vec3ConversionAi(convert));
+					black = true;
 				}
-				else
-				{
-					vec2 val;
-					if (j %16 == 0)
-					{
-						black = !black;
-					}
-					if (black)
-					{					
-						val = vec2(0.1, 0.1);
-					}
-					else
-					{
-						val = vec2(0.9,0.9);
-					}
-					texCords.push_back(val);
-				}
+			}
+			if (!black)
+			{
+				vec2 val(0.1, 0.1);
+				texCords.push_back(val);
+
+				val = vec2(0.9, 0.9);
+				texCords.push_back(val);
 			}
 			for (unsigned int j = 0; j < temp->mNumFaces; j++)
 			{
@@ -332,10 +340,14 @@ void LoadModel()
 	glm::vec3 pointMin, pointMax;
 	getMinMax(glmVerticies, pointMin, pointMax);
 	//float height =   pointMin.y-pointMax.y;// y[maxY] - y[minY];
-	//for (int i = 0; i < glmVerticies.size(); i++)
-	//{
-	//	glmVerticies[i].y -= height / 2;
-	//}
+	for (int i = 0; i < glmVerticies.size(); i++)
+	{
+		//glmVerticies[i].y -= height / 2;
+		colourData.push_back(0.0f);
+		colourData.push_back(0.0f);
+		colourData.push_back(0.0f);
+		colourData.push_back(1.0f);
+	}
 
 
 	Model newModel(glmVerticies, indicies, texCords, path, pointMax, pointMin);
@@ -372,21 +384,47 @@ void ParseModels()
 	vector<glm::vec3> finalPoints;
 	vector<glm::vec2> finalTexture;
 	bool existingTexture = false;
+	bool flip = false;
 
 	for (int j = 0; j < (int)models.size(); j++)
 	{
 		for (int i = 0; i < (int)models[j].indicies.size(); i++)
 		{
 			finalPoints.push_back(models[j].points[models[j].indicies[i]]);
-			if (models[j].textureUvs.size() > 0)
+			if (models[j].textureUvs.size() > 2)
 			{
+
 				existingTexture = true;
 				finalTexture.push_back(models[j].textureUvs[tempTest[i]]);
+			}
+			else/* if (i < models[j].indicies.size()/4)*/
+			{
+				/*if (j % 4 == 0)
+				{*/
+				flip = !flip;
+				//}
+
+				existingTexture = true;
+				if (flip)
+				{
+					finalTexture.push_back(models[j].textureUvs[0]);
+				}
+				else
+				{
+					finalTexture.push_back(models[j].textureUvs[1]);
+				}
 			}
 		}
 	}
 
+	//vector<vec2> textCopy = finalTexture;
+	//finalTexture.insert(finalTexture.begin(), textCopy.begin(), textCopy.end());
+
+	//vector<vec3> reversePoints = finalPoints;
+	//std::reverse(finalPoints.begin(), finalPoints.end());
+	//finalPoints.insert(finalPoints.end(),reversePoints.begin(),reversePoints.end());
 	NumVertices = (GLuint)finalPoints.size();
+
 
 	glGenBuffers(NumBuffers, Buffers);
 
@@ -400,10 +438,9 @@ void ParseModels()
 	{
 		LoadTexture(models[0], finalTexture);
 	}
-	else
-	{
-		LoadColour();
-	}
+
+	LoadColour();
+
 
 	//MVP creation
 	model = glm::mat4(1.0f);
@@ -739,8 +776,8 @@ void display()
 	glClear(GL_COLOR_BUFFER_BIT);
 	glClearColor(0.3f, 0.8f, 0.8f, 1.0f);
 
-	//culls back faces
-	glEnable(GL_CULL_FACE);//keep only this
+	//culls back faces	
+	glEnable(GL_CULL_FACE);
 
 	//binds VAO
 	glBindVertexArray(VAO[Triangles]);
@@ -1313,6 +1350,7 @@ int main()
 
 	glPointSize(30);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	static float xMove, yMove, zMove = 0.0f;

@@ -26,7 +26,7 @@ main()
 	//V = normalize(V);
 	gl_Position = p_matrix * P;
       
-	//fragColour=vColour;
-	fragColour = vec4(0.9, 0.9, 0.9, 1);
+	fragColour=vColour;
+	//fragColour = vec4(0.9, 0.1, 0.1, 1);
 	TexCoord=tPosition;
 }
