@@ -197,31 +197,37 @@ void LoadTexture(Model model, vector<glm::vec2> finalTexture)
 //works with cubes
 void LoadColour()
 {
-	GLfloat  colours[][4] = {
-		{ 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f },
-		{ 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f },
-
-		{ 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f },
-		{ 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f },
-
-		{ 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f },
-		{ 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f },
-
-		{ 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f },
-		{ 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f },
-
-		{ 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f },
-		{ 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f },
-
-		{ 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f },
-		{ 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f },
-
-	};
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[Colours]);
 
-	glBufferStorage(GL_ARRAY_BUFFER, sizeof(colours), &colours, 0);
+	glBufferStorage(GL_ARRAY_BUFFER, colourData.size() * sizeof(GLfloat), colourData.data(), 0);
 
 	glVertexAttribPointer(cPosition, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+}
+
+void UpdateColour()
+{	
+	
+	for (int i = 0; i < models[selectedModel].indicies.size(); i++)
+	{
+		int base = i * 4;
+		if (models[selectedModel].indicies[i] == selectedPoint)
+		{
+			
+			colourData[base + 1] = 0.0f;
+			colourData[base + 2] = 0.0f;
+			colourData[base + 3] = 0.9f;
+		}
+		else
+		{
+			
+			colourData[base + 1] = 1.0f;
+			colourData[base + 2] = 1.0f;
+			colourData[base + 3] = 1.0f;
+		}
+	
+	}
+	LoadColour();
+	update = true;
 }
 
 void LoadModel()
@@ -340,12 +346,12 @@ void LoadModel()
 	glm::vec3 pointMin, pointMax;
 	getMinMax(glmVerticies, pointMin, pointMax);
 	//float height =   pointMin.y-pointMax.y;// y[maxY] - y[minY];
-	for (int i = 0; i < glmVerticies.size(); i++)
+	for (int i = 0; i < indicies.size(); i++)
 	{
 		//glmVerticies[i].y -= height / 2;
-		colourData.push_back(0.0f);
-		colourData.push_back(0.0f);
-		colourData.push_back(0.0f);
+		colourData.push_back(1.0f);
+		colourData.push_back(1.0f);
+		colourData.push_back(1.0f);
 		colourData.push_back(1.0f);
 	}
 
@@ -969,6 +975,8 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
 			vector<glm::vec3> pointsList;
 			int closest = 0;
+
+			//Since the rendered model matches the actual model data, the data of the rendered model is never referenced.
 			if (intersectModel != -1)
 			{
 				interaction = true;
@@ -990,6 +998,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					xUpdate = pointData.x;
 					yUpdate = pointData.y;
 					zUpdate = pointData.z;
+					UpdateColour();
 				}
 			}
 
@@ -1227,8 +1236,6 @@ void CheckEvents(GLFWwindow* window)
 		rightPress = leftPress = false;
 	}
 
-
-
 	double localXRotate, localYRotate;//pitch, yaw
 	double localXPan, localYPan;//move.x,move.y
 	if (leftPress)
@@ -1357,7 +1364,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		if (update)
-		{
+		{			
 			ParseModels();
 			if (leftPress == false)
 			{
@@ -1399,8 +1406,7 @@ int main()
 				{
 					ImGui::Columns(3, "layout", true);
 
-					vec3 locl = models[selectedModel].points[selectedPoint];
-
+					vec3 locl = models[selectedModel].points[selectedPoint];					
 					ImGui::Text("Current point:\nX:%f\nY:%f\nZ:%f", locl.x, locl.y, locl.z);
 					ImGui::Separator();
 					ImGui::InputFloat("X", &xUpdate, 0.01f, 0.1f, "%.8f");
