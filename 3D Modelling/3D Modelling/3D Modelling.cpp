@@ -49,6 +49,7 @@
 
 #include <vector>
 #include <iostream>
+#include <set>
 #pragma endregion includes
 
 using namespace std;
@@ -97,15 +98,17 @@ vector<GLfloat> colourData;
 glm::vec3 sphere_pos_wor[] = { glm::vec3(-2.0, 0.0, 0.0), glm::vec3(2.0, 0.0, 0.0), glm::vec3(-2.0, 0.0, -2.0), glm::vec3(1.5, 1.0, -1.0) };
 const float sphere_radius = 1.0f;
 
+
 glm::mat4 model;//local?
 glm::mat4 view;//view_mat
 glm::mat4 projection;//proj_mat
 glm::vec3 cameraPos;//cam_pos
 
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;//pitch,yaw,roll
-float xPan = 0.0f, yPan = 0.0f, zPan = 0.0f;//move
+float xPan = 0.0f, yPan = 0.0f;//move
 float culumXPan = 0.0f, culumYPan = 0.0f;
-float scroll = 10.0f, culumScroll = 0.0f;
+float scroll = 0.0f, culumScroll = 0.0f;
+glm::vec2 startPos;
 
 versor quaternion;
 glm::mat4 rotationMatrix;
@@ -130,6 +133,14 @@ ExportType currentType;
 #define BUFFER_OFFSET(a)((void*)(a))
 #pragma endregion Vars
 
+
+void ResetValues()
+{
+	xRotation = yRotation = zRotation = 0;
+	xPan = yPan = scroll = 0;
+	culumXPan = culumYPan = culumScroll = 0;
+	selectedModel = selectedPoint = -1;
+}
 
 void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
 {
@@ -205,29 +216,61 @@ void LoadColour()
 }
 
 void UpdateColour()
-{	
-	
+{
+
 	for (int i = 0; i < models[selectedModel].indicies.size(); i++)
 	{
 		int base = i * 4;
 		if (models[selectedModel].indicies[i] == selectedPoint)
 		{
-			
+
 			colourData[base + 1] = 0.0f;
 			colourData[base + 2] = 0.0f;
 			colourData[base + 3] = 0.9f;
 		}
 		else
 		{
-			
+
 			colourData[base + 1] = 1.0f;
 			colourData[base + 2] = 1.0f;
 			colourData[base + 3] = 1.0f;
 		}
-	
+
 	}
 	LoadColour();
 	update = true;
+}
+
+void MapGeneration()
+{
+	vector<set<int> > vals;
+
+	std::set<int>::iterator it;
+	vals.resize(models[selectedModel].points.size());
+	vector<unsigned int> indicies = models[selectedModel].indicies;
+	
+	for (int i = 0; i < indicies.size(); i += 3)
+	{
+
+		vals[indicies[i]].insert(indicies[i + 1]);
+		vals[indicies[i]].insert(indicies[i + 2]);
+
+		vals[indicies[i + 1]].insert(indicies[i]);
+		vals[indicies[i + 1]].insert(indicies[i + 2]);
+
+		vals[indicies[i + 2]].insert(indicies[i]);
+		vals[indicies[i + 2]].insert(indicies[i + 1]);
+	}
+	
+	for (int i = 0; i < vals.size(); i++)
+	{
+		for (it = vals[i].begin(); it != vals[i].end(); ++it)
+		{
+			printf("%d,", it);
+		}
+		printf("\n");
+	}
+
 }
 
 void LoadModel()
@@ -624,8 +667,7 @@ void LoadSetup(GLFWwindow* window)
 				{
 					LoadModel();
 					ParseModels();
-					xRotation = yRotation = zRotation = 0;
-					culumXPan = culumYPan = culumScroll = 0;
+					ResetValues();
 				}
 
 			}
@@ -923,6 +965,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	//Ray(glm::vec3(x, y, -1), rayWorld);
 
 #pragma region
+	//if there is a selected model or point
 	if (selectedModel != -1 && selectedPoint != -1)
 	{
 		interaction = false;
@@ -949,7 +992,8 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 
 	if (!interaction && localYPos > 17.5)
-	{//middle
+	{
+		//middle
 		if (button == GLFW_MOUSE_BUTTON_MIDDLE)
 		{
 
@@ -972,7 +1016,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 			glm::vec4 nearPoint(x, y, z, 1);
 			nearPoint = view * nearPoint;
-			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
+			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, culumScroll, 0);//zRotate
 			vector<glm::vec3> pointsList;
 			int closest = 0;
 
@@ -999,6 +1043,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					yUpdate = pointData.y;
 					zUpdate = pointData.z;
 					UpdateColour();
+					MapGeneration();
 				}
 			}
 
@@ -1017,136 +1062,139 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 			}
 		}
+#pragma region
+		//			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
+		//
+		//			/*	int closest_sphere_clicked = -1;
+		//				float closest_intersection = 0.0f;
+		//				for (int i = 0; i < 4; i++)
+		//				{
+		//					float t_dist = 0.0f;
+		//					if (ray_sphere(cameraPos, rayWor, sphere_pos_wor[i], sphere_radius, &t_dist))
+		//					{
+		//						if (-1 == closest_sphere_clicked || t_dist < closest_intersection) {
+		//							closest_sphere_clicked = i;
+		//							closest_intersection = t_dist;
+		//						}
+		//					}
+		//				}*/
+		//
+		//#pragma region
+		//				/*
+		//
+		//
+		//							GLint viewport[4]; //var to hold the viewport info
+		//							GLdouble modelview[16]; //var to hold the modelview info
+		//							GLdouble projection[16]; //var to hold the projection matrix info
+		//							GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
+		//							GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
+		//
+		//							glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+		//							glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+		//							glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
+		//
+		//							winX = (float)localXPos;
+		//							winY = (float)viewport[3] - (float)localYPos;
+		//
+		//							glm::vec3 screenPos, farPos, dodgy;
+		//							//near plane
+		//							gluUnProject(winX, winY, 0, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+		//							screenPos = glm::vec3(worldX, worldY, worldZ);
+		//							//farPlane
+		//							gluUnProject(winX, winY, 1, modelview, projection, viewport, &worldX, &worldY, &worldZ);
+		//							farPos = glm::vec3(worldX, worldY, worldZ);
+		//
+		//							vector<glm::vec3>screen;
+		//							if (models.size() >= 1)
+		//							{
+		//								for (int i = 0; i < models[0].points.size(); i++)
+		//								{
+		//									gluProject(models[0].points[i].x, models[0].points[i].y, models[0].points[i].z,
+		//										modelview, projection, viewport,
+		//										&worldX, &worldY, &worldZ);
+		//									screen.push_back(glm::vec3(worldX, worldY, worldZ));
+		//								}
+		//							}
+		//							glm::vec3 screenPoint(winX, winY, -100);
+		//
+		//				*/
+		//#pragma endregion
+		//				//vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
+		//				//glm::vec3 dir(farPos - screenPos);
+		//			//localxPos/width, localYpos/height;
+		//			double mouseX = ((width/xPos)/(width / 2))*cameraPos.x;
+		//			double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
+		//			vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z,1);
+		//			Ray rayDir(vec3(view * mousePos), rayWor);
+		//			//vec4 camerapos,1
+		//
+		//			int intersectModel = -1;
+		//			for (int i = 0; i < (int)models.size(); i++)
+		//			{
+		//				//bounding box is roughtly right height, X dimens seem off?
+		//				//raypicking needs to be redone, should be able to just check if its in bounds now.
+		//				//also box need to rotate with model
+		//				//models[i].boundBox.rayIntersects(nearPoint, direction)
+		//				//GLUnproject getting contant point regalress of position
+		//				if (models[i].box->intersect(rayDir))
+		//				{
+		//					intersectModel = i;
+		//					break;
+		//				}
+		//			}
+		//
+		//			glm::vec4 nearPoint(x, y, z, 1);
+		//			nearPoint = view * nearPoint;
+		//			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
+		//			vector<glm::vec3> pointsList;
+		//			int closest = 0;
+		//			if (intersectModel != -1)
+		//			{
+		//
+		//				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
+		//				{
+		//					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
+		//					{
+		//						closest = i;
+		//					}
+		//
+		//				}
+		//
+		//
+		//				/*printf("\nSelected Point:%f,%f,%f\n",
+		//					models[intersectModel].points[closestScreen].x,
+		//					models[intersectModel].points[closestScreen].y,
+		//					models[intersectModel].points[closestScreen].z);*/
+		//				if (intersectModel != -1 && closest != -1)
+		//				{
+		//					selectedModel = intersectModel;
+		//					selectedPoint = closest;
+		//					movementStart = vec2(localXPos, localYPos);
+		//				}
+		//				//else
+		//				//{
+		//				//	vec3 movement = screenPos - movementStart;
+		//				//	models[intersectModel].points[closest] += vec3(model * vec4(movement, 0));
+		//				//	movementStart = screenPos;
+		//				//	update = true;
+		//
+		//				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
+		//				//	/*vec3 upper = models[intersectModel].box->bounds[0];
+		//				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z
+		//				//}
+		//			}
+#pragma endregion UNDER REFACTORING
+
 		//left
 		else if (button == GLFW_MOUSE_BUTTON_1)
 		{
 
-#pragma region
-			//			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
-			//
-			//			/*	int closest_sphere_clicked = -1;
-			//				float closest_intersection = 0.0f;
-			//				for (int i = 0; i < 4; i++)
-			//				{
-			//					float t_dist = 0.0f;
-			//					if (ray_sphere(cameraPos, rayWor, sphere_pos_wor[i], sphere_radius, &t_dist))
-			//					{
-			//						if (-1 == closest_sphere_clicked || t_dist < closest_intersection) {
-			//							closest_sphere_clicked = i;
-			//							closest_intersection = t_dist;
-			//						}
-			//					}
-			//				}*/
-			//
-			//#pragma region
-			//				/*
-			//
-			//
-			//							GLint viewport[4]; //var to hold the viewport info
-			//							GLdouble modelview[16]; //var to hold the modelview info
-			//							GLdouble projection[16]; //var to hold the projection matrix info
-			//							GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
-			//							GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
-			//
-			//							glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
-			//							glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
-			//							glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
-			//
-			//							winX = (float)localXPos;
-			//							winY = (float)viewport[3] - (float)localYPos;
-			//
-			//							glm::vec3 screenPos, farPos, dodgy;
-			//							//near plane
-			//							gluUnProject(winX, winY, 0, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-			//							screenPos = glm::vec3(worldX, worldY, worldZ);
-			//							//farPlane
-			//							gluUnProject(winX, winY, 1, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-			//							farPos = glm::vec3(worldX, worldY, worldZ);
-			//
-			//							vector<glm::vec3>screen;
-			//							if (models.size() >= 1)
-			//							{
-			//								for (int i = 0; i < models[0].points.size(); i++)
-			//								{
-			//									gluProject(models[0].points[i].x, models[0].points[i].y, models[0].points[i].z,
-			//										modelview, projection, viewport,
-			//										&worldX, &worldY, &worldZ);
-			//									screen.push_back(glm::vec3(worldX, worldY, worldZ));
-			//								}
-			//							}
-			//							glm::vec3 screenPoint(winX, winY, -100);
-			//
-			//				*/
-			//#pragma endregion
-			//				//vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
-			//				//glm::vec3 dir(farPos - screenPos);
-			//			//localxPos/width, localYpos/height;
-			//			double mouseX = ((width/xPos)/(width / 2))*cameraPos.x;
-			//			double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
-			//			vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z,1);
-			//			Ray rayDir(vec3(view * mousePos), rayWor);
-			//			//vec4 camerapos,1
-			//
-			//			int intersectModel = -1;
-			//			for (int i = 0; i < (int)models.size(); i++)
-			//			{
-			//				//bounding box is roughtly right height, X dimens seem off?
-			//				//raypicking needs to be redone, should be able to just check if its in bounds now.
-			//				//also box need to rotate with model
-			//				//models[i].boundBox.rayIntersects(nearPoint, direction)
-			//				//GLUnproject getting contant point regalress of position
-			//				if (models[i].box->intersect(rayDir))
-			//				{
-			//					intersectModel = i;
-			//					break;
-			//				}
-			//			}
-			//
-			//			glm::vec4 nearPoint(x, y, z, 1);
-			//			nearPoint = view * nearPoint;
-			//			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
-			//			vector<glm::vec3> pointsList;
-			//			int closest = 0;
-			//			if (intersectModel != -1)
-			//			{
-			//
-			//				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
-			//				{
-			//					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
-			//					{
-			//						closest = i;
-			//					}
-			//
-			//				}
-			//
-			//
-			//				/*printf("\nSelected Point:%f,%f,%f\n",
-			//					models[intersectModel].points[closestScreen].x,
-			//					models[intersectModel].points[closestScreen].y,
-			//					models[intersectModel].points[closestScreen].z);*/
-			//				if (intersectModel != -1 && closest != -1)
-			//				{
-			//					selectedModel = intersectModel;
-			//					selectedPoint = closest;
-			//					movementStart = vec2(localXPos, localYPos);
-			//				}
-			//				//else
-			//				//{
-			//				//	vec3 movement = screenPos - movementStart;
-			//				//	models[intersectModel].points[closest] += vec3(model * vec4(movement, 0));
-			//				//	movementStart = screenPos;
-			//				//	update = true;
-			//
-			//				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
-			//				//	/*vec3 upper = models[intersectModel].box->bounds[0];
-			//				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z
-			//				//}
-			//			}
-#pragma endregion UNDER REFACTORING
-
 			if (action == GLFW_PRESS)
 			{
 				leftPress = true;
+				double x, y;
+				glfwGetCursorPos(window, &x, &y);
+				startPos = vec2(x, y);
 			}
 			else //if (action == GLFW_RELEASE)
 			{
@@ -1248,7 +1296,21 @@ void CheckEvents(GLFWwindow* window)
 		{
 			xRotation -= xPos - (float)localXRotate;
 			yRotation -= yPos - (float)localYRotate;
+		}
 
+		if (selectedModel == -1)
+		{
+			if (culumScroll < 0)
+			{
+				cameraPos.x -= (startPos.x - (float)localXRotate) / 100;
+			}
+			else
+			{
+				cameraPos.x += (startPos.x - (float)localXRotate) / 100;
+			}
+			cameraPos.y -= (startPos.y - (float)localYRotate) / 100;
+			startPos = vec2(localXRotate, localYRotate);
+			printf("%f,%f\n", cameraPos.x, cameraPos.y);
 		}
 
 		if (xRotation > 360)
@@ -1357,14 +1419,14 @@ int main()
 
 	glPointSize(30);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	static float xMove, yMove, zMove = 0.0f;
 	while (!glfwWindowShouldClose(window))
 	{
 		if (update)
-		{			
+		{
 			ParseModels();
 			if (leftPress == false)
 			{
@@ -1406,7 +1468,7 @@ int main()
 				{
 					ImGui::Columns(3, "layout", true);
 
-					vec3 locl = models[selectedModel].points[selectedPoint];					
+					vec3 locl = models[selectedModel].points[selectedPoint];
 					ImGui::Text("Current point:\nX:%f\nY:%f\nZ:%f", locl.x, locl.y, locl.z);
 					ImGui::Separator();
 					ImGui::InputFloat("X", &xUpdate, 0.01f, 0.1f, "%.8f");
@@ -1471,6 +1533,7 @@ int main()
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
+	program = NULL;
 	aiReleaseImport(scene);
 
 	glfwDestroyWindow(window);
