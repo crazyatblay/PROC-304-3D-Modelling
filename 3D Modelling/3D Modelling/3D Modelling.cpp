@@ -109,11 +109,13 @@ float xPan = 0.0f, yPan = 0.0f;//move
 float culumXPan = 0.0f, culumYPan = 0.0f;
 float scroll = 0.0f, culumScroll = 0.0f;
 glm::vec2 startPos;
+set<int> points;
 
 versor quaternion;
 glm::mat4 rotationMatrix;
 
 int selectedModel = -1, selectedPoint = -1;
+int moveSize = 0;
 glm::vec2 movementStart;
 
 double xPos, yPos;
@@ -205,7 +207,7 @@ void LoadTexture(Model model, vector<glm::vec2> finalTexture)
 	stbi_image_free(data);
 	glUniform1i(glGetUniformLocation(program, "texture1"), 0);// creating the model matrix
 }
-//works with cubes
+
 void LoadColour()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[Colours]);
@@ -215,40 +217,79 @@ void LoadColour()
 	glVertexAttribPointer(cPosition, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
 }
 
+set<int> RecursiveMap(int selectedPoint, int remainingDistance)
+{
+	vector<set<int> > group = models[selectedModel].map;
+	set<int> returnSet = group[selectedPoint];
+	set<int> combineSet;
+	
+	if (remainingDistance == 0||returnSet.size()>8)
+	{
+		return { selectedPoint };
+	}
+	/*if (remainingDistance == 1)
+	{
+		return returnSet;
+	}*/
+
+	std::set<int>::iterator it;
+	it = returnSet.begin();
+
+	while (it != returnSet.end())
+	{
+		set<int> localSet = RecursiveMap(*it, remainingDistance - 1);
+		combineSet.insert(localSet.begin(), localSet.end());
+		it++;
+	}
+	returnSet.insert(combineSet.begin(), combineSet.end());;
+	return returnSet;
+}
+
 void UpdateColour()
 {
+	set<int> group;
 
+	group = RecursiveMap(selectedPoint, moveSize);
+	std::set<int>::iterator it = group.begin();
+	
 	for (int i = 0; i < models[selectedModel].indicies.size(); i++)
 	{
 		int base = i * 4;
-		if (models[selectedModel].indicies[i] == selectedPoint)
+		bool match = false;
+		while (it != group.end())
 		{
+			if (models[selectedModel].indicies[i] == *it)
+			{
 
-			colourData[base + 1] = 0.0f;
-			colourData[base + 2] = 0.0f;
-			colourData[base + 3] = 0.9f;
+				colourData[base + 1] = 0.0f;
+				colourData[base + 2] = 0.0f;
+				colourData[base + 3] = 0.9f; 
+				it=group.end();
+				it--;
+				match = true;
+			}
+			it++;
 		}
-		else
+		if(!match)
 		{
 
 			colourData[base + 1] = 1.0f;
 			colourData[base + 2] = 1.0f;
 			colourData[base + 3] = 1.0f;
 		}
-
+		it = group.begin();
 	}
 	LoadColour();
 	update = true;
 }
 
-void MapGeneration()
+vector<set<int> > MapGeneration(int size, vector<GLuint> inds)
 {
 	vector<set<int> > vals;
 
-	std::set<int>::iterator it;
-	vals.resize(models[selectedModel].points.size());
-	vector<unsigned int> indicies = models[selectedModel].indicies;
-	
+	vals.resize(size);
+	vector<unsigned int> indicies = inds;
+
 	for (int i = 0; i < indicies.size(); i += 3)
 	{
 
@@ -261,16 +302,23 @@ void MapGeneration()
 		vals[indicies[i + 2]].insert(indicies[i]);
 		vals[indicies[i + 2]].insert(indicies[i + 1]);
 	}
-	
-	for (int i = 0; i < vals.size(); i++)
-	{
-		for (it = vals[i].begin(); it != vals[i].end(); ++it)
-		{
-			printf("%d,", it);
-		}
-		printf("\n");
-	}
 
+	//std::set<int>::iterator it;
+	//for (int i = 0; i < vals.size(); i++)
+	//{
+	//	set<int> a = vals[i];
+	//	it = a.begin();
+	//	//for (int j = 0; j < a.size(); j++)
+	//	while (it != a.end())
+	//	{
+
+	//		printf("%d,", *it);
+	//		it++;
+	//	}
+	//	printf("\n");
+	//}
+
+	return vals;
 }
 
 void LoadModel()
@@ -370,9 +418,9 @@ void LoadModel()
 			{
 				glmVerticies.pop_back();
 			}
-
 		}
 	}
+
 	verticiesList.clear();
 	vector<GLuint> indicies = Conversion::parseAIFaces(facesList);
 	tempTest = indicies;
@@ -389,19 +437,23 @@ void LoadModel()
 	glm::vec3 pointMin, pointMax;
 	getMinMax(glmVerticies, pointMin, pointMax);
 	//float height =   pointMin.y-pointMax.y;// y[maxY] - y[minY];
-	for (int i = 0; i < indicies.size(); i++)
-	{
-		//glmVerticies[i].y -= height / 2;
-		colourData.push_back(1.0f);
-		colourData.push_back(1.0f);
-		colourData.push_back(1.0f);
-		colourData.push_back(1.0f);
-	}
 
+	colourData.resize(indicies.size() * 4);
+	std::fill(colourData.begin(), colourData.end(), 1.0f);
+	//for (int i = 0; i < indicies.size(); i++)
+	//{
+	//	//glmVerticies[i].y -= height / 2;
+	//	colourData.push_back(1.0f);
+	//	colourData.push_back(1.0f);
+	//	colourData.push_back(1.0f);
+	//	colourData.push_back(1.0f);
+	//}
 
-	Model newModel(glmVerticies, indicies, texCords, path, pointMax, pointMin);
+	vector<set<int> > map = MapGeneration(glmVerticies.size(), indicies);
+	Model newModel(glmVerticies, indicies, texCords, path, pointMax, pointMin, map);
 
 	models.push_back(newModel);
+
 	indicies.clear();
 	glmVerticies.clear();
 	meshList.clear();
@@ -1043,7 +1095,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					yUpdate = pointData.y;
 					zUpdate = pointData.z;
 					UpdateColour();
-					MapGeneration();
+
 				}
 			}
 
@@ -1254,6 +1306,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		cameraPos.x += 0.1;
 	}
 
+	if (key == GLFW_KEY_EQUAL && action == GLFW_RELEASE)
+	{
+		moveSize++;
+	}
+	else if (key == GLFW_KEY_MINUS && action == GLFW_RELEASE)
+	{
+		moveSize--;
+	}
+
 	if (key == GLFW_KEY_SPACE)
 	{
 		cameraPos = glm::vec3(0, 0, -1);
@@ -1310,7 +1371,7 @@ void CheckEvents(GLFWwindow* window)
 			}
 			cameraPos.y -= (startPos.y - (float)localYRotate) / 100;
 			startPos = vec2(localXRotate, localYRotate);
-			printf("%f,%f\n", cameraPos.x, cameraPos.y);
+			//printf("%f,%f\n", cameraPos.x, cameraPos.y);
 		}
 
 		if (xRotation > 360)
@@ -1419,8 +1480,8 @@ int main()
 
 	glPointSize(30);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	static float xMove, yMove, zMove = 0.0f;
 	while (!glfwWindowShouldClose(window))
