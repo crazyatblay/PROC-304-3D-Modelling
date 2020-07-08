@@ -107,15 +107,15 @@ glm::vec3 cameraPos;//cam_pos
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;//pitch,yaw,roll
 float xPan = 0.0f, yPan = 0.0f;//move
 float culumXPan = 0.0f, culumYPan = 0.0f;
-float scroll = 0.0f, culumScroll = 0.0f;
+float scroll = 10.0f, culumScroll = 10.0f;
 glm::vec2 startPos;
-set<int> points;
 
 versor quaternion;
 glm::mat4 rotationMatrix;
 
 int selectedModel = -1, selectedPoint = -1;
 int moveSize = 0;
+set<int> selectedPoints;
 glm::vec2 movementStart;
 
 double xPos, yPos;
@@ -138,10 +138,12 @@ ExportType currentType;
 
 void ResetValues()
 {
+	selectedPoint = selectedModel = -1;
 	xRotation = yRotation = zRotation = 0;
 	xPan = yPan = scroll = 0;
 	culumXPan = culumYPan = culumScroll = 0;
 	selectedModel = selectedPoint = -1;
+	selectedPoints.clear();
 }
 
 void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
@@ -222,15 +224,16 @@ set<int> RecursiveMap(int selectedPoint, int remainingDistance)
 	vector<set<int> > group = models[selectedModel].map;
 	set<int> returnSet = group[selectedPoint];
 	set<int> combineSet;
-	
-	if (remainingDistance == 0||returnSet.size()>8)
+
+	if (remainingDistance <= 0 || returnSet.size() > 8)
 	{
 		return { selectedPoint };
 	}
-	/*if (remainingDistance == 1)
+	if (remainingDistance == 1)
 	{
+		returnSet.insert(selectedPoint);
 		return returnSet;
-	}*/
+	}
 
 	std::set<int>::iterator it;
 	it = returnSet.begin();
@@ -250,8 +253,9 @@ void UpdateColour()
 	set<int> group;
 
 	group = RecursiveMap(selectedPoint, moveSize);
+	selectedPoints.insert(group.begin(), group.end());
 	std::set<int>::iterator it = group.begin();
-	
+
 	for (int i = 0; i < models[selectedModel].indicies.size(); i++)
 	{
 		int base = i * 4;
@@ -263,14 +267,14 @@ void UpdateColour()
 
 				colourData[base + 1] = 0.0f;
 				colourData[base + 2] = 0.0f;
-				colourData[base + 3] = 0.9f; 
-				it=group.end();
+				colourData[base + 3] = 0.9f;
+				it = group.end();
 				it--;
 				match = true;
 			}
 			it++;
 		}
-		if(!match)
+		if (!match)
 		{
 
 			colourData[base + 1] = 1.0f;
@@ -905,8 +909,8 @@ void display()
 		models[0].box->bounds[1] = model * glm::vec4(models[0].box->bounds[1], 1);
 	}
 	//view = glm::translate(view, glm::vec3(0.0f, 0.0f, (-4.0f * scroll)));
-	cameraPos.x += xPan;
-	cameraPos.y += yPan;
+	/*cameraPos.x += xPan;
+	cameraPos.y += yPan;*/
 	cameraPos.z += scroll;
 
 
@@ -1076,6 +1080,35 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			if (intersectModel != -1)
 			{
 				interaction = true;
+				vec3 mousePoint;
+				vec2 relationCentre = vec2(width / 2, height / 2);//relative start position
+
+				double windPointAX, windPointAY, windPointAZ;
+				double windPointBX, windPointBY, windPointBZ;
+
+				GLint viewport[4]; //var to hold the viewport info
+				GLdouble modelview[16]; //var to hold the modelview info
+				GLdouble projectionLoc[16]; //var to hold the projection matrix info
+
+				glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+				glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+				glGetDoublev(GL_PROJECTION_MATRIX, projectionLoc); //get the projection matrix info
+
+				gluProject(cameraPos.x, cameraPos.y, cameraPos.z, modelview, projectionLoc, viewport, &windPointAX, &windPointAY, &windPointAZ);
+				gluProject(cameraPos.x + 0.1, cameraPos.y + 0.1, cameraPos.z + 0.1, modelview, projectionLoc, viewport, &windPointBX, &windPointBY, &windPointBZ);
+			
+				printf("%f,%f\n", cameraPos.x, cameraPos.y);
+				
+				vec3 pointOne = vec3(windPointBX - windPointAX, windPointBY - windPointAY, windPointBZ - windPointAZ);
+				
+				double checkX = 0.1/pointOne.x;
+				double checkY = 0.1 / pointOne.y;
+				double checkZ = 0.1 / pointOne.z;
+
+				vec3 mouseMove = pointOne * vec3(localXPos, localYPos, 0) * vec3(0.1, 0.1, 0.1);
+				
+				//vec4 checkVal = vec4(localXPos, localYPos, 0, 1) + vec4(cameraPos, 1);
+				vec4 mouseMatrix = projection * vec4(mouseMove, 1);
 				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 				{
 					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
@@ -1087,6 +1120,12 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				if (intersectModel != -1 && closest != -1)
 				{
+					if (mods == -GLFW_MOD_CONTROL)
+					{
+						selectedPoint = closest;
+						UpdateColour();
+					}
+
 					selectedModel = intersectModel;
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
@@ -1098,8 +1137,6 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				}
 			}
-
-
 
 			if (action == GLFW_PRESS && intersectModel == -1)
 			{
@@ -1402,9 +1439,16 @@ void CheckEvents(GLFWwindow* window)
 		glfwGetCursorPos(window, &localXPan, &localYPan);
 		if (xPos != 0 && yPos != 0)
 		{
-			xPan -= (xPos - (float)localXPan) / 100;
-			yPan += (yPos - (float)localYPan) / 100;
-			culumXPan += xPan;
+			xPan += (xPos - (float)localXPan) / 100;
+			yPan -= (yPos - (float)localYPan) / 100;
+			if (culumScroll < 0)
+			{
+				culumXPan -= xPan;
+			}
+			else
+			{
+				culumXPan += xPan;
+			}
 			culumYPan += yPan;
 		}
 		xPos = localXPan;
@@ -1541,6 +1585,7 @@ int main()
 					{
 						models[selectedModel].points[selectedPoint] = vec3(xUpdate, yUpdate, zUpdate);
 						selectedModel = selectedPoint = -1;
+						selectedPoints = {};
 						updatePoint = false;
 						update = true;
 					}
@@ -1552,12 +1597,19 @@ int main()
 					bool movePoint = ImGui::Button("Move");
 					if (movePoint)
 					{
-						vec3 selectedLocal = models[selectedModel].points[selectedPoint];
-						selectedLocal.x = selectedLocal.x + xMove;
-						selectedLocal.y = selectedLocal.y + yMove;
-						selectedLocal.z = selectedLocal.z + zMove;
-						models[selectedModel].points[selectedPoint] = selectedLocal;
+						std::set<int>::iterator it;
+						it = selectedPoints.begin();
+						while (it != selectedPoints.end())
+						{
+							vec3 selectedLocal = models[selectedModel].points[*it];
+							selectedLocal.x = selectedLocal.x + xMove;
+							selectedLocal.y = selectedLocal.y + yMove;
+							selectedLocal.z = selectedLocal.z + zMove;
+							models[selectedModel].points[*it] = selectedLocal;
+							it++;
+						}
 						selectedModel = selectedPoint = -1;
+						selectedPoints = {};
 						updatePoint = false;
 						update = true;
 					}
@@ -1566,6 +1618,7 @@ int main()
 					if (cancel)
 					{
 						selectedModel = selectedPoint = -1;
+						selectedPoints = {};
 						updatePoint = false;
 					}
 				}
