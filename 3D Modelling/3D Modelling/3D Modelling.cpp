@@ -1,4 +1,4 @@
-#define STB_IMAGE_IMPLEMENTATION
+﻿#define STB_IMAGE_IMPLEMENTATION
 #if defined(NANOGUI_GLAD)
 #if defined(NANOGUI_SHARED) && !defined(GLAD_GLAPI_EXPORT)
 #define GLAD_GLAPI_EXPORT
@@ -103,11 +103,12 @@ glm::mat4 model;//local?
 glm::mat4 view;//view_mat
 glm::mat4 projection;//proj_mat
 glm::vec3 cameraPos;//cam_pos
+glm::vec3 planeSetUp;
 
 float xRotation = 0.0f, yRotation = 0.0f, zRotation = 0.0f;//pitch,yaw,roll
 float xPan = 0.0f, yPan = 0.0f;//move
 float culumXPan = 0.0f, culumYPan = 0.0f;
-float scroll = 10.0f, culumScroll = 10.0f;
+float scroll = -10.0f, culumScroll = -10.0f;
 glm::vec2 startPos;
 
 versor quaternion;
@@ -138,11 +139,17 @@ ExportType currentType;
 
 void ResetValues()
 {
+
 	selectedPoint = selectedModel = -1;
 	xRotation = yRotation = zRotation = 0;
+	cameraPos = vec3(0, 0, 0);
+	planeSetUp = vec3(1, 1, 0);
 	xPan = yPan = scroll = 0;
-	culumXPan = culumYPan = culumScroll = 0;
+	culumXPan = culumYPan = 0;
+	scroll = culumScroll = -5;
 	selectedModel = selectedPoint = -1;
+
+	updatePoint = false;
 	selectedPoints.clear();
 }
 
@@ -306,21 +313,6 @@ vector<set<int> > MapGeneration(int size, vector<GLuint> inds)
 		vals[indicies[i + 2]].insert(indicies[i]);
 		vals[indicies[i + 2]].insert(indicies[i + 1]);
 	}
-
-	//std::set<int>::iterator it;
-	//for (int i = 0; i < vals.size(); i++)
-	//{
-	//	set<int> a = vals[i];
-	//	it = a.begin();
-	//	//for (int j = 0; j < a.size(); j++)
-	//	while (it != a.end())
-	//	{
-
-	//		printf("%d,", *it);
-	//		it++;
-	//	}
-	//	printf("\n");
-	//}
 
 	return vals;
 }
@@ -556,7 +548,7 @@ void ParseModels()
 	view = glm::mat4(1.0f);
 	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -2.0f));// creating the projection matrix
 
-	projection = glm::perspective(45.0f, 4.0f / 3, 0.1f, 20.0f);// Adding all matrices up to create combined matrix
+	projection = glm::ortho(45.0f, 4.0f / 3, 0.1f, 20.0f);// Adding all matrices up to create combined matrix
 
 	glm::mat4 mv = view * model;
 
@@ -912,7 +904,7 @@ void display()
 	/*cameraPos.x += xPan;
 	cameraPos.y += yPan;*/
 	cameraPos.z += scroll;
-
+	planeSetUp.z += scroll;
 
 	view = lookAt(cameraPos,
 		vec3(culumXPan, culumYPan, 0),
@@ -921,7 +913,9 @@ void display()
 	scroll = xPan = yPan = 0.0f;
 
 	glm::mat4 mv = view * model;
-	projection = glm::perspective(45.0f, 4.0f / 3, 0.1f, 20.0f);
+
+	//window size?
+	projection = glm::perspective(glm::radians(45.0f), 4.0f / 3, 0.1f, 20.0f);
 
 	int mvLoc = glGetUniformLocation(program, "mv_matrix");
 	glUniformMatrix4fv(mvLoc, 1, GL_FALSE, glm::value_ptr(mv));
@@ -999,6 +993,131 @@ glm::vec3 get_ray_from_mouse(float mouse_x, float mouse_y, GLFWwindow* window) {
 	return ray_wor;
 }
 
+
+double SolveZPos(double xInput, double yInput)
+{
+	/*a(x−x0)+b(y−y0)+c(z−z0)=0
+	(x+2)+3(y−3)−7(z−4)=0
+	x+3y-7z+21=0
+	culumScroll*Xinput
+	*/
+	double CamDiffX = planeSetUp.x - xInput;//cameraPos.x;
+	double CamDiffY = planeSetUp.y - yInput;// cameraPos.y;
+	double CamDiffZ = planeSetUp.z - cameraPos.z;
+	vec3 norm = cameraPos - vec3(culumXPan, culumYPan, 0);
+	norm = normalize(norm);
+	//vec3 norm2 = planeSetUp - vec3(culumXPan, culumYPan, 0);
+	//norm2 = normalize(norm2);
+	double res = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * CamDiffZ);
+	double resFinal = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * cameraPos.z);
+	return 0;
+}
+
+
+glm::vec3 setUpPlane(vec3 setupPoint)
+{
+	vec3 startPos(0, 0, culumScroll);
+	vec3 currentPos = cameraPos;
+	vec3 startOffset = vec3(setupPoint.x, setupPoint.y, culumScroll);
+	vec3 currOffset = startOffset;
+
+	float distFromCentre = distance(currentPos, vec3(0, 0, 0));
+
+	float distanceXZ = distance(vec2(currentPos.x, currentPos.z), vec2(0, 0));
+	float distanceYZ = distance(vec2(currentPos.y, currentPos.z), vec2(0, 0));
+
+	double xDiff = currentPos.x;
+	double yDiff = currentPos.y;
+	double zDiff = culumScroll;
+	double XZDiff, YZDiff;
+
+	//at 0,0,-z, no change to z
+	//at 0,0,+z, offset x by diffent bbetween offset and currentPos
+
+	//rad or degree?
+	if (distanceXZ > 8)
+	{
+		distanceXZ /= 2;
+	}
+	float dotX = dot((vec2(currentPos.x, currentPos.z)), vec2(startPos.x, startPos.z));
+	float dotCheck = dot((vec2(0, 5)), vec2(0, 5));
+	float angleXZ = dotX / (abs(culumScroll) * abs(distanceXZ));
+	if (angleXZ <= 1)
+	{
+		angleXZ = acos(angleXZ);
+	}
+	else
+	{
+		angleXZ = 0;
+	}
+	printf("X:%f\n", degrees(angleXZ));
+	if (currentPos.x < 0)
+	{
+		angleXZ = -angleXZ;
+	}
+
+	//might need to change for pan
+	float rotatedX = cos(-angleXZ) * (startOffset.x - 0) - sin(-angleXZ) * (startOffset.z - 0) + 0;
+	float rotatedZX = sin(-angleXZ) * (startOffset.x - 0) + cos(-angleXZ) * (startOffset.z - 0) + 0;
+
+	currOffset.x = -rotatedX;// -setupPoint.x;//final X (correct)	
+	currOffset.z += rotatedZX - startPos.z;
+
+
+	float dotY = dot((vec2(currentPos.y, currentPos.z)), (vec2(startPos.y, startPos.z)));
+	float angleYZ = dotY / (abs(culumScroll) * abs(distanceYZ));
+
+	angleYZ = acos(angleYZ);
+	if (culumScroll > 0)
+	{
+		angleYZ = -angleYZ;
+	}
+
+	printf("Y:%f\n", degrees(angleYZ));
+	if (currentPos.y < 0)
+	{
+		angleYZ = -angleYZ;
+	}
+
+	//same note about pan, see above
+	float rotatedY = cos(angleYZ) * (startOffset.y - 0) - sin(angleYZ) * (startOffset.z - 0) + 0;//1
+	float rotatedZY = sin(-angleYZ) * (startOffset.y - 0) + cos(-angleYZ) * (startOffset.z - 0) + 0;//-5
+
+	currOffset.y = rotatedY;// -setupPoint.y;//final X (correct)
+	currOffset.z += rotatedZY - startPos.z;
+
+	//glRotatef(angleXZ, currOffset.x, 0, currOffset.z);
+	//at 5,0,-10, offset by 0.5?
+	//at 0,5,-10, offset by 0,5?
+
+	//double zChange = (yDiff * 0.5) + (xDiff * 0.5);
+	//
+	//camPos should be at screen centre, planeSetup should be at -0.5,0.5 screen
+	if (culumScroll > 0)
+	{
+		currOffset.x = -currOffset.x;
+	}
+	//printf("CAM:%f,%f,%f\nOff:%f,%f,%f\n", cameraPos.x, cameraPos.y, cameraPos.z, planeSetUp.x, planeSetUp.y, planeSetUp.z);
+
+	return currOffset;
+}
+
+
+void GetPostion(double propX, double propY)
+{
+	const double DIST = 0.03;
+	//0.1=0.054,0.1=0.04
+	double xPos, yPos;
+	double AB = abs(culumScroll);
+	double totalWidth = (AB * 0.03) + 2.33;
+	double totalHeight = (AB * 0.03) + 1.64;
+	xPos = propX * totalWidth;
+	yPos = propY * totalHeight;
+	//invert?
+	planeSetUp.x = xPos;
+	planeSetUp.y = yPos;
+}
+
 void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	int width, height;
@@ -1044,7 +1163,6 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		//	printPoint.x,
 		//	printPoint.y,
 		//	printPoint.z);
-
 	}
 
 	if (!interaction && localYPos > 17.5)
@@ -1053,12 +1171,33 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 		if (button == GLFW_MOUSE_BUTTON_MIDDLE)
 		{
 
-			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
+			GLint viewport[4]; //var to hold the viewport info
+			GLdouble modelview[16]; //var to hold the modelview info
+			GLdouble projectionLoc[16]; //var to hold the projection matrix info
 
-			double mouseX = ((width / xPos) / (width / 2)) * cameraPos.x;
-			double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
-			vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z, 1);
-			Ray rayDir(vec3(view * mousePos), rayWor);
+			glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
+			glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
+			glGetDoublev(GL_PROJECTION_MATRIX, projectionLoc); //get the projection matrix info
+			double invertedY = viewport[3] - localYPos;
+
+
+			double windowPointX, windowPointY, windowPointZ;
+			gluUnProject(localXPos, invertedY, 1, modelview, projectionLoc, viewport, &windowPointX, &windowPointY, &windowPointZ);
+
+			GetPostion(windowPointX, windowPointY);
+			vec3 posStart;
+			printf("PlaneStart:%f,%f,%f\n", planeSetUp.x, planeSetUp.y, planeSetUp.z);
+			posStart = setUpPlane(planeSetUp);
+			//glm::vec3 rayWor = get_ray_from_mouse(posStart.x, posStart.y, window);
+
+			//double mouseX = ((width / xPos) / (width / 2)) * cameraPos.x;
+			//double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
+			//vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z, 1);
+
+			printf("PosStart:%f,%f,%f\n", posStart.x, posStart.y, posStart.z);
+			Ray rayDir(posStart, normalize(-posStart));
+			rayDir.dir = normalize(-cameraPos);
+			//Ray rayDir(vec3(view * mousePos), rayWor);
 
 			int intersectModel = -1;
 			for (int i = 0; i < (int)models.size(); i++)
@@ -1069,11 +1208,11 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					break;
 				}
 			}
-
-			glm::vec4 nearPoint(x, y, z, 1);
-			nearPoint = view * nearPoint;
-			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, culumScroll, 0);//zRotate
-			vector<glm::vec3> pointsList;
+			intersectModel = 0;
+			//glm::vec4 nearPoint(x, y, z, 1);
+			//nearPoint = view * nearPoint;
+			//nearPoint = nearPoint * glm::vec4(xRotation, yRotation, culumScroll, 0);//zRotate
+			//vector<glm::vec3> pointsList;
 			int closest = 0;
 
 			//Since the rendered model matches the actual model data, the data of the rendered model is never referenced.
@@ -1082,36 +1221,29 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				interaction = true;
 				vec3 mousePoint;
 				vec2 relationCentre = vec2(width / 2, height / 2);//relative start position
+				relationCentre.x = (localXPos - relationCentre.x) / width;
+				relationCentre.y = (localYPos - relationCentre.y) / height;
 
-				double windPointAX, windPointAY, windPointAZ;
-				double windPointBX, windPointBY, windPointBZ;
+				//planeSetUp= -0.5,0.5
+				//double xMov = planeSetUp.x - cameraPos.x;//1 local pos, 0.5 screen pos
+				//double yMov = cameraPos.y - planeSetUp.y;//1 local pos, 0.5 screen pos
+				//double xPlace = (worldPointBX / 0.5) * xMov;
+				//double yPlace = (worldPointBY / 0.5) * yMov;
+				//double zPlace2 = SolveZPos(xPlace, yPlace);;
+				//double zPlane = (xPlace * planeSetUp.z) - (yPlace * planeSetUp.z);
 
-				GLint viewport[4]; //var to hold the viewport info
-				GLdouble modelview[16]; //var to hold the modelview info
-				GLdouble projectionLoc[16]; //var to hold the projection matrix info
+				//vec4 res = vec4(worldPointBX, worldPointBY, -worldPointBZ, 1) + vec4(cameraPos, 1);
+				//vec4 resTrue = projection * res;
+				//vec3 invertZ = vec3(resTrue.x, resTrue.y, -resTrue.z);
 
-				glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
-				glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
-				glGetDoublev(GL_PROJECTION_MATRIX, projectionLoc); //get the projection matrix info
+				//tryinng camZ, prob need multiply by view
+				//vec3 mouseMove = vec3(pointOne.x, pointOne.y, pointOne.z) * vec3(relationCentre, 0);//pointOne * vec3(localXPos, localYPos, 0) * vec3(0.1, 0.1, 0.1);
 
-				gluProject(cameraPos.x, cameraPos.y, cameraPos.z, modelview, projectionLoc, viewport, &windPointAX, &windPointAY, &windPointAZ);
-				gluProject(cameraPos.x + 0.1, cameraPos.y + 0.1, cameraPos.z + 0.1, modelview, projectionLoc, viewport, &windPointBX, &windPointBY, &windPointBZ);
-			
-				printf("%f,%f\n", cameraPos.x, cameraPos.y);
-				
-				vec3 pointOne = vec3(windPointBX - windPointAX, windPointBY - windPointAY, windPointBZ - windPointAZ);
-				
-				double checkX = 0.1/pointOne.x;
-				double checkY = 0.1 / pointOne.y;
-				double checkZ = 0.1 / pointOne.z;
-
-				vec3 mouseMove = pointOne * vec3(localXPos, localYPos, 0) * vec3(0.1, 0.1, 0.1);
-				
 				//vec4 checkVal = vec4(localXPos, localYPos, 0, 1) + vec4(cameraPos, 1);
-				vec4 mouseMatrix = projection * vec4(mouseMove, 1);
+				//vec4 mouseMatrix = projection * vec4(mouseMove, 1);
 				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 				{
-					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
+					if (distance(posStart, models[intersectModel].points[i]) < distance(posStart, models[intersectModel].points[closest]))
 					{
 						closest = i;
 					}
@@ -1130,21 +1262,22 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
 					vec3 pointData = models[selectedModel].points[selectedPoint];
-					xUpdate = pointData.x;
-					yUpdate = pointData.y;
-					zUpdate = pointData.z;
+
 					UpdateColour();
+
+					xUpdate = posStart.x;
+					yUpdate = posStart.y;
+					zUpdate = posStart.z;
 
 				}
 			}
 
-			if (action == GLFW_PRESS && intersectModel == -1)
+			if (action == GLFW_PRESS && intersectModel != -1)
 			{
 				middlePress = true;
 			}
 			else if (action == GLFW_RELEASE)
 			{
-				middlePress = false;
 				rightPress = false;
 				xPos = yPos = 0;
 				movementStart = glm::vec2(0, 0);
@@ -1329,18 +1462,27 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_W)
 	{
 		cameraPos.y += 0.1;
+		planeSetUp.y += 0.1;
 	}
 	if (key == GLFW_KEY_S)
 	{
 		cameraPos.y -= 0.1;
+		planeSetUp.y -= 0.1;
 	}
 	if (key == GLFW_KEY_A)
 	{
 		cameraPos.x -= 0.1;
+		planeSetUp.x -= 0.1;
 	}
 	if (key == GLFW_KEY_D)
 	{
 		cameraPos.x += 0.1;
+		planeSetUp.x += 0.1;
+	}
+
+	if (key == GLFW_KEY_Y && action == GLFW_RELEASE)
+	{
+		setUpPlane(planeSetUp);
 	}
 
 	if (key == GLFW_KEY_EQUAL && action == GLFW_RELEASE)
@@ -1354,7 +1496,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 	if (key == GLFW_KEY_SPACE)
 	{
-		cameraPos = glm::vec3(0, 0, -1);
+		cameraPos = glm::vec3(0, 0, 0);
+		scroll = culumScroll = 0;
+		planeSetUp = glm::vec3(1, 1, -1);
 		xRotation = yRotation = 0;
 	}
 }
@@ -1384,7 +1528,7 @@ void CheckEvents(GLFWwindow* window)
 
 	double localXRotate, localYRotate;//pitch, yaw
 	double localXPan, localYPan;//move.x,move.y
-	if (leftPress)
+	if (leftPress && !middlePress)
 	{
 		rightPress = false;
 		localXRotate = localYRotate = 0;
@@ -1401,14 +1545,16 @@ void CheckEvents(GLFWwindow* window)
 			if (culumScroll < 0)
 			{
 				cameraPos.x -= (startPos.x - (float)localXRotate) / 100;
+				planeSetUp.x -= (startPos.x - (float)localXRotate) / 100;
 			}
 			else
 			{
 				cameraPos.x += (startPos.x - (float)localXRotate) / 100;
+				planeSetUp.x += (startPos.x - (float)localXRotate) / 100;
 			}
 			cameraPos.y -= (startPos.y - (float)localYRotate) / 100;
+			planeSetUp.y -= (startPos.y - (float)localYRotate) / 100;
 			startPos = vec2(localXRotate, localYRotate);
-			//printf("%f,%f\n", cameraPos.x, cameraPos.y);
 		}
 
 		if (xRotation > 360)
@@ -1431,7 +1577,7 @@ void CheckEvents(GLFWwindow* window)
 		xPos = localXRotate;
 		yPos = localYRotate;
 	}
-	else if (rightPress)
+	else if (rightPress && !middlePress)
 	{
 		leftPress = false;
 		localXPan = localYPan = 0;
@@ -1472,35 +1618,43 @@ void CheckEvents(GLFWwindow* window)
 		cameraPos += vec3(rgt * -movement.x);
 		cameraPos += vec3(up * movement.y);
 		cameraPos += vec3(fwd * -movement.z);
+		planeSetUp += vec3(rgt * -movement.x);
+		planeSetUp += vec3(up * movement.y);
+		planeSetUp += vec3(fwd * -movement.z);
 
 
 		cameraPos.x = min(max(cameraPos.x, -5), 5);
 		cameraPos.y = min(max(cameraPos.y, -5), 5);
 		cameraPos.z = min(max(cameraPos.z, -5), 5);
+		planeSetUp.x = min(max(planeSetUp.x, -5), 5);
+		planeSetUp.y = min(max(planeSetUp.y, -5), 5);
+		planeSetUp.z = min(max(planeSetUp.z, -5), 5);
 		xRotation = yRotation = 0;
 		glm::mat4 Tin = translate(mat4(1.0f), cameraPos);
 	}
 }
 
+
 int main()
 {
 	//hides console window
-	//WCHAR path[265];
-	//GetModuleFileName(NULL, path, 265);
-	//HWND console = FindWindow(L"ConsoleWindowClass", path);
-	//ShowWindow(console, SW_HIDE);
+	/*WCHAR path[265];
+	GetModuleFileName(NULL, path, 265);
+	HWND console = FindWindow(L"ConsoleWindowClass", path);
+	ShowWindow(console, SW_HIDE);*/
 
 #pragma region 
 	update = false;
 
-	cameraPos = glm::vec3(0, 0, -1);
+	cameraPos = glm::vec3(0, 0, 0);
+	planeSetUp = glm::vec3(1, 1, 0);
 	glm::mat4 T = translate(mat4(), glm::vec3(-cameraPos.x, -cameraPos.y, -cameraPos.z));
 	rotationMatrix = Conversion::convertMat4(maT4(rotate_y_deg(identity_maT4(), -0.0f)));
 	quaternion = quat_from_axis_deg(0.0f, 0, 1, 0);
 	view = rotationMatrix * T;
 
-	int WindowWidth = 1080, WindowHeight = 720;
-
+	int WindowWidth = 1280, WindowHeight = 960;
+	//base 2.481width, 1.79 height.
 	glfwInit();
 
 	GLFWwindow* window = nullptr;
@@ -1588,12 +1742,14 @@ int main()
 						selectedPoints = {};
 						updatePoint = false;
 						update = true;
+						middlePress = false;
 					}
 					ImGui::NextColumn();
 
-					ImGui::InputFloat("XMove", &xMove, 0.01f, 0.1f, "%.1f");
-					ImGui::InputFloat("YMove", &yMove, 0.01f, 0.1f, "%.1f");
-					ImGui::InputFloat("ZMove", &zMove, 0.01f, 0.1f, "%.1f");
+					ImGui::Text("Number of Selected Points:%d\n", selectedPoints.size());
+					ImGui::InputFloat("XMove", &xMove, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("YMove", &yMove, 0.01f, 0.1f, "%.8f");
+					ImGui::InputFloat("ZMove", &zMove, 0.01f, 0.1f, "%.8f");
 					bool movePoint = ImGui::Button("Move");
 					if (movePoint)
 					{
@@ -1612,6 +1768,7 @@ int main()
 						selectedPoints = {};
 						updatePoint = false;
 						update = true;
+						middlePress = false;
 					}
 					ImGui::NextColumn();
 					bool cancel = ImGui::Button("Cancel");
@@ -1620,6 +1777,7 @@ int main()
 						selectedModel = selectedPoint = -1;
 						selectedPoints = {};
 						updatePoint = false;
+						middlePress = false;
 					}
 				}
 
