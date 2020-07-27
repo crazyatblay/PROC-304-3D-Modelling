@@ -50,6 +50,7 @@
 #include <vector>
 #include <iostream>
 #include <set>
+#include <map>
 #pragma endregion includes
 
 using namespace std;
@@ -993,25 +994,25 @@ glm::vec3 get_ray_from_mouse(float mouse_x, float mouse_y, GLFWwindow* window) {
 	return ray_wor;
 }
 
-
-double SolveZPos(double xInput, double yInput)
-{
-	/*a(x−x0)+b(y−y0)+c(z−z0)=0
-	(x+2)+3(y−3)−7(z−4)=0
-	x+3y-7z+21=0
-	culumScroll*Xinput
-	*/
-	double CamDiffX = planeSetUp.x - xInput;//cameraPos.x;
-	double CamDiffY = planeSetUp.y - yInput;// cameraPos.y;
-	double CamDiffZ = planeSetUp.z - cameraPos.z;
-	vec3 norm = cameraPos - vec3(culumXPan, culumYPan, 0);
-	norm = normalize(norm);
-	//vec3 norm2 = planeSetUp - vec3(culumXPan, culumYPan, 0);
-	//norm2 = normalize(norm2);
-	double res = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * CamDiffZ);
-	double resFinal = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * cameraPos.z);
-	return 0;
-}
+//
+//double SolveZPos(double xInput, double yInput)
+//{
+//	/*a(x−x0)+b(y−y0)+c(z−z0)=0
+//	(x+2)+3(y−3)−7(z−4)=0
+//	x+3y-7z+21=0
+//	culumScroll*Xinput
+//	*/
+//	double CamDiffX = planeSetUp.x - xInput;//cameraPos.x;
+//	double CamDiffY = planeSetUp.y - yInput;// cameraPos.y;
+//	double CamDiffZ = planeSetUp.z - cameraPos.z;
+//	vec3 norm = cameraPos - vec3(culumXPan, culumYPan, 0);
+//	norm = normalize(norm);
+//	//vec3 norm2 = planeSetUp - vec3(culumXPan, culumYPan, 0);
+//	//norm2 = normalize(norm2);
+//	double res = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * CamDiffZ);
+//	double resFinal = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * cameraPos.z);
+//	return 0;
+//}
 
 
 glm::vec3 setUpPlane(vec3 setupPoint)
@@ -1102,6 +1103,40 @@ glm::vec3 setUpPlane(vec3 setupPoint)
 	return currOffset;
 }
 
+vector<int> closestPoints(vec3 startPoint, vec3 startNormal)
+{
+	vector<glm::vec3> pointList = models[selectedModel].points;
+
+	vector<double> points(pointList.size());
+
+	vec3 normalised = normalize(startNormal);
+	double normalX, normalY, normalZ;
+
+	for (int i = 0; i < pointList.size(); i++)
+	{
+		vec3 point = normalize(pointList[i]);
+		normalX = abs(normalised.x - point.x);
+		normalY = abs(normalised.y - point.y);
+		normalZ = abs(normalised.z - point.z);
+		points[i] = normalX + normalY + normalZ;
+	}
+	int checkVal = points.size();
+	vector<double>::iterator max = max_element(points.begin(), points.end());
+	int maxLoc = std::distance(points.begin(), max);
+	double maxVal = points[maxLoc];
+	vector<int>finalPoints;
+	for (int i = 0; i <= 5; i++)
+	{
+		vector<double>::iterator min = min_element(points.begin(), points.end());
+		int val = std::distance(points.begin(), min);
+
+		finalPoints.push_back(val);
+
+		points[val] = points[val] + maxVal;
+
+	}
+	return finalPoints;
+}
 
 void GetPostion(double propX, double propY)
 {
@@ -1168,7 +1203,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 	if (!interaction && localYPos > 17.5)
 	{
 		//middle
-		if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
 		{
 
 			GLint viewport[4]; //var to hold the viewport info
@@ -1218,6 +1253,8 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 			//Since the rendered model matches the actual model data, the data of the rendered model is never referenced.
 			if (intersectModel != -1)
 			{
+				selectedModel = intersectModel;
+
 				interaction = true;
 				vec3 mousePoint;
 				vec2 relationCentre = vec2(width / 2, height / 2);//relative start position
@@ -1241,14 +1278,26 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				//vec4 checkVal = vec4(localXPos, localYPos, 0, 1) + vec4(cameraPos, 1);
 				//vec4 mouseMatrix = projection * vec4(mouseMove, 1);
-				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
+				vec3 normal = posStart - vec3(0, 0, 0);
+				vector<int> resultTest;
+				resultTest = closestPoints(posStart, normal);
+				int countPos = 1;
+				for (int i = 1; i < (int)resultTest.size(); i++)
+				{
+					if (distance(posStart, models[intersectModel].points[resultTest[i]]) < distance(posStart, models[intersectModel].points[resultTest[closest]]))
+					{
+						closest = i;
+					}
+				}
+				closest = resultTest[closest];
+				/*for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
 				{
 					if (distance(posStart, models[intersectModel].points[i]) < distance(posStart, models[intersectModel].points[closest]))
 					{
 						closest = i;
 					}
 
-				}
+				}*/
 
 				if (intersectModel != -1 && closest != -1)
 				{
@@ -1258,12 +1307,13 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 						UpdateColour();
 					}
 
-					selectedModel = intersectModel;
+
 					selectedPoint = closest;
 					movementStart = vec2(localXPos, localYPos);
 					vec3 pointData = models[selectedModel].points[selectedPoint];
 
 					UpdateColour();
+
 
 					xUpdate = posStart.x;
 					yUpdate = posStart.y;
