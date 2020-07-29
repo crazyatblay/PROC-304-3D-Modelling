@@ -35,8 +35,9 @@
 #include "lib/stb/stb_image.h"
 
 #include <assimp/cimport.h>
-#include <assimp/Importer.hpp>
 #include <assimp/cexport.h>
+#include <assimp/Importer.hpp>
+#include <assimp/Exporter.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
@@ -91,6 +92,8 @@ GLuint NumVertices = 0;
 
 GLuint program;
 const aiScene* scene;
+Assimp::Importer importer;
+Assimp::Exporter exporter;
 vector<Model> models;
 GLuint texture1;
 vector<GLuint> tempTest;
@@ -136,6 +139,7 @@ ExportType currentType;
 
 #define BUFFER_OFFSET(a)((void*)(a))
 #pragma endregion Vars
+
 
 
 void ResetValues()
@@ -256,40 +260,62 @@ set<int> RecursiveMap(int selectedPoint, int remainingDistance)
 	return returnSet;
 }
 
-void UpdateColour()
-{
-	set<int> group;
 
-	group = RecursiveMap(selectedPoint, moveSize);
-	selectedPoints.insert(group.begin(), group.end());
-	std::set<int>::iterator it = group.begin();
+void ClearColour()
+{
+	int size = colourData.size();
+	colourData.clear();
+	colourData.resize(size);
+	std::fill(colourData.begin(), colourData.end(), 1.0f);
+}
+
+void ClearColour(int index)
+{
+	for (int i = 0; i < models[selectedModel].indicies.size(); i++)
+	{
+		if (models[selectedModel].indicies[i] == index)
+		{
+			int base = i * 4;
+			colourData[base + 1] = 1.0f;
+			colourData[base + 2] = 1.0f;
+			colourData[base + 3] = 1.0f;
+		}
+	}
+}
+
+void UpdateColour(bool add)
+{
+
+	if (!add)
+	{
+		ClearColour();
+		set<int> group;
+		selectedPoints.clear();
+		group = RecursiveMap(selectedPoint, moveSize);
+		selectedPoints.insert(group.begin(), group.end());
+	}
+	std::set<int>::iterator it = selectedPoints.begin();
 
 	for (int i = 0; i < models[selectedModel].indicies.size(); i++)
 	{
 		int base = i * 4;
 		bool match = false;
-		while (it != group.end())
+		while (it != selectedPoints.end())
 		{
-			if (models[selectedModel].indicies[i] == *it)
+			int val = *it;
+			if (models[selectedModel].indicies[i] == val)
 			{
-
 				colourData[base + 1] = 0.0f;
 				colourData[base + 2] = 0.0f;
 				colourData[base + 3] = 0.9f;
-				it = group.end();
+				it = selectedPoints.end();
 				it--;
 				match = true;
 			}
 			it++;
 		}
-		if (!match)
-		{
 
-			colourData[base + 1] = 1.0f;
-			colourData[base + 2] = 1.0f;
-			colourData[base + 3] = 1.0f;
-		}
-		it = group.begin();
+		it = selectedPoints.begin();
 	}
 	LoadColour();
 	update = true;
@@ -327,7 +353,6 @@ void LoadModel()
 	string path;
 	for (unsigned int i = 0; i < scene->mNumMeshes; i++)
 	{
-
 		aiMesh* meshes = scene->mMeshes[i];
 		meshList.push_back(meshes);
 
@@ -362,13 +387,6 @@ void LoadModel()
 				glGenTextures(1, &result);
 
 			}
-
-			/*	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-				if (data)
-				{
-					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-					glGenerateMipmap(GL_TEXTURE_2D);
-				}*/
 
 			bool black = false;
 			unsigned int numVerticiesLocal = temp->mNumVertices;
@@ -433,18 +451,9 @@ void LoadModel()
 
 	glm::vec3 pointMin, pointMax;
 	getMinMax(glmVerticies, pointMin, pointMax);
-	//float height =   pointMin.y-pointMax.y;// y[maxY] - y[minY];
 
 	colourData.resize(indicies.size() * 4);
 	std::fill(colourData.begin(), colourData.end(), 1.0f);
-	//for (int i = 0; i < indicies.size(); i++)
-	//{
-	//	//glmVerticies[i].y -= height / 2;
-	//	colourData.push_back(1.0f);
-	//	colourData.push_back(1.0f);
-	//	colourData.push_back(1.0f);
-	//	colourData.push_back(1.0f);
-	//}
 
 	vector<set<int> > map = MapGeneration(glmVerticies.size(), indicies);
 	Model newModel(glmVerticies, indicies, texCords, path, pointMax, pointMin, map);
@@ -615,7 +624,7 @@ ExportType compareInput(string typeName)
 	}
 	else if (typeName == "obj")
 	{
-		return ExportType(4);
+		return ExportType(3);
 	}
 	else if (typeName == "stl")
 	{
@@ -651,10 +660,12 @@ void SplitInput(string input)
 	currentType = compareInput(fileTypeLoc);
 }
 
+
+
 void LoadSetup(GLFWwindow* window)
 {
 	models.clear();
-
+	aiScene* temp;
 	IFileDialog* pfd = NULL;
 	HRESULT hr;
 	HWND hWnd = glfwGetWin32Window(window);
@@ -706,8 +717,9 @@ void LoadSetup(GLFWwindow* window)
 				}
 				string path = filePath + fileName + fileExt;
 
-				Assimp::Importer importer;
+				
 				scene = importer.ReadFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+
 				if (scene == nullptr)
 				{
 					MessageBox(nullptr, TEXT("Loading Error"), TEXT("File corrupt/not found!"), MB_OK);
@@ -718,7 +730,6 @@ void LoadSetup(GLFWwindow* window)
 					ParseModels();
 					ResetValues();
 				}
-
 			}
 		}
 	}
@@ -727,18 +738,19 @@ void LoadSetup(GLFWwindow* window)
 //fileName+path
 aiReturn saveScene(string FileName, ExportType ex)
 {
+	int meshes = scene->mNumMeshes;
 	/*Gets a list of all avaliable formats*/
-	const char* desc;
-	size_t exportNumbers = aiGetExportFormatCount();
-	std::printf("Avaliable formats");
-	for (int i = 0; i < exportNumbers; i++)
-	{
-		desc = aiGetExportFormatDescription(i)->description;
-		printf(desc);
-		printf("%d\n", i);
-	}
+	//const char* desc;
+	//size_t exportNumbers = aiGetExportFormatCount();
+	//std::printf("Avaliable formats");
+	//for (int i = 0; i < exportNumbers; i++)
+	//{
+	//	desc = aiGetExportFormatDescription(i)->description;
+	//	printf(desc);
+	//	printf("%d\n", i);
+	//}
 
-	try
+	/*try
 	{
 		desc = aiGetExportFormatDescription(ex)->description;
 		std::printf(desc);
@@ -748,7 +760,7 @@ aiReturn saveScene(string FileName, ExportType ex)
 		MessageBox(nullptr, TEXT("File Type Unavaliable"), TEXT("File Type unavaliable"), MB_OK);
 
 		return AI_FAILURE;
-	}
+	}*/
 
 	string output = FileName;
 	if (output == "" || scene == NULL)
@@ -791,8 +803,9 @@ aiReturn saveScene(string FileName, ExportType ex)
 			vecsList.clear();
 			//facesList.clear();doens't like clearing faces? unsure why but whatever.
 		}
-
-		return aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
+		
+		aiReturn result = exporter.Export(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
+		return result;// aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 	}
 	catch (exception e)
 	{
@@ -829,7 +842,6 @@ void SaveSetup(GLFWwindow* window)
 	dlg->SetOkButtonLabel(L"Save ");
 	dlg->SetDefaultExtension(L".obj");
 
-	//taken from stackoverflow, might have problems?
 	wstring convert(fileName.begin(), fileName.end());
 	dlg->SetFileName(convert.c_str());
 
@@ -881,29 +893,12 @@ void display()
 
 	model = glm::mat4(1.0f);
 
-	//model = scale(model, glm::vec3(0.25f, 0.25f, 0.25f));
-
-	//if (rightPress)
-	//{
-	//	model = glm::translate(model, glm::vec3(xPan, yPan, zPan));
-	//}
-	//model = glm::translate(model, glm::vec3(xPan, yPan, zPan));
-	////if rotation >180, appears inverted, "bug"
-	//model = rotate(model, radians(xRotation), glm::vec3(0.0f, 1.0f, .0f));
-	//model = rotate(model, radians(yRotation), glm::vec3(1.0f, 0.0f, 0.0f));
-	//model = rotate(model, radians(zRotation), glm::vec3(0.0f, 0.0f, 1.0f));
-
-
-
 	if (models.size() > 0)
 	{//need to iterate
 		getMinMax(models[0].points, models[0].box->bounds[0], models[0].box->bounds[1]);
 		models[0].box->bounds[0] = model * glm::vec4(models[0].box->bounds[0], 1);
 		models[0].box->bounds[1] = model * glm::vec4(models[0].box->bounds[1], 1);
 	}
-	//view = glm::translate(view, glm::vec3(0.0f, 0.0f, (-4.0f * scroll)));
-	/*cameraPos.x += xPan;
-	cameraPos.y += yPan;*/
 	cameraPos.z += scroll;
 	planeSetUp.z += scroll;
 
@@ -993,27 +988,6 @@ glm::vec3 get_ray_from_mouse(float mouse_x, float mouse_y, GLFWwindow* window) {
 	ray_wor = normalize(ray_wor);
 	return ray_wor;
 }
-
-//
-//double SolveZPos(double xInput, double yInput)
-//{
-//	/*a(x−x0)+b(y−y0)+c(z−z0)=0
-//	(x+2)+3(y−3)−7(z−4)=0
-//	x+3y-7z+21=0
-//	culumScroll*Xinput
-//	*/
-//	double CamDiffX = planeSetUp.x - xInput;//cameraPos.x;
-//	double CamDiffY = planeSetUp.y - yInput;// cameraPos.y;
-//	double CamDiffZ = planeSetUp.z - cameraPos.z;
-//	vec3 norm = cameraPos - vec3(culumXPan, culumYPan, 0);
-//	norm = normalize(norm);
-//	//vec3 norm2 = planeSetUp - vec3(culumXPan, culumYPan, 0);
-//	//norm2 = normalize(norm2);
-//	double res = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * CamDiffZ);
-//	double resFinal = (norm.x * CamDiffX) + (norm.y * CamDiffY) + (norm.z * cameraPos.z);
-//	return 0;
-//}
-
 
 glm::vec3 setUpPlane(vec3 setupPoint)
 {
@@ -1278,7 +1252,9 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				//vec4 checkVal = vec4(localXPos, localYPos, 0, 1) + vec4(cameraPos, 1);
 				//vec4 mouseMatrix = projection * vec4(mouseMove, 1);
-				vec3 normal = posStart - vec3(0, 0, 0);
+
+				vec3 distanceDifference = posStart - cameraPos;
+				vec3 normal = posStart - (vec3(0, 0, 0) - distanceDifference);
 				vector<int> resultTest;
 				resultTest = closestPoints(posStart, normal);
 				int countPos = 1;
@@ -1301,19 +1277,30 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 				if (intersectModel != -1 && closest != -1)
 				{
-					if (mods == -GLFW_MOD_CONTROL)
-					{
-						selectedPoint = closest;
-						UpdateColour();
-					}
-
 
 					selectedPoint = closest;
+
+					if (mods == GLFW_MOD_CONTROL)
+					{
+						if (selectedPoints.find(closest) == selectedPoints.end())
+						{
+							selectedPoints.insert(closest);
+						}
+						else
+						{
+							selectedPoints.erase(closest);
+							ClearColour(closest);
+						}
+						UpdateColour(true);
+					}
+
+					else
+					{
+						UpdateColour(false);
+					}
+
 					movementStart = vec2(localXPos, localYPos);
 					vec3 pointData = models[selectedModel].points[selectedPoint];
-
-					UpdateColour();
-
 
 					xUpdate = posStart.x;
 					yUpdate = posStart.y;
@@ -1334,129 +1321,6 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 
 			}
 		}
-#pragma region
-		//			glm::vec3 rayWor = get_ray_from_mouse(x, y, window);
-		//
-		//			/*	int closest_sphere_clicked = -1;
-		//				float closest_intersection = 0.0f;
-		//				for (int i = 0; i < 4; i++)
-		//				{
-		//					float t_dist = 0.0f;
-		//					if (ray_sphere(cameraPos, rayWor, sphere_pos_wor[i], sphere_radius, &t_dist))
-		//					{
-		//						if (-1 == closest_sphere_clicked || t_dist < closest_intersection) {
-		//							closest_sphere_clicked = i;
-		//							closest_intersection = t_dist;
-		//						}
-		//					}
-		//				}*/
-		//
-		//#pragma region
-		//				/*
-		//
-		//
-		//							GLint viewport[4]; //var to hold the viewport info
-		//							GLdouble modelview[16]; //var to hold the modelview info
-		//							GLdouble projection[16]; //var to hold the projection matrix info
-		//							GLfloat winX, winY, winZ; //variables to hold screen x,y,z coordinates
-		//							GLdouble worldX, worldY, worldZ; //variables to hold world x,y,z coordinates
-		//
-		//							glGetIntegerv(GL_VIEWPORT, viewport); //get the viewport info
-		//							glGetDoublev(GL_MODELVIEW_MATRIX, modelview); //get the modelview info
-		//							glGetDoublev(GL_PROJECTION_MATRIX, projection); //get the projection matrix info
-		//
-		//							winX = (float)localXPos;
-		//							winY = (float)viewport[3] - (float)localYPos;
-		//
-		//							glm::vec3 screenPos, farPos, dodgy;
-		//							//near plane
-		//							gluUnProject(winX, winY, 0, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-		//							screenPos = glm::vec3(worldX, worldY, worldZ);
-		//							//farPlane
-		//							gluUnProject(winX, winY, 1, modelview, projection, viewport, &worldX, &worldY, &worldZ);
-		//							farPos = glm::vec3(worldX, worldY, worldZ);
-		//
-		//							vector<glm::vec3>screen;
-		//							if (models.size() >= 1)
-		//							{
-		//								for (int i = 0; i < models[0].points.size(); i++)
-		//								{
-		//									gluProject(models[0].points[i].x, models[0].points[i].y, models[0].points[i].z,
-		//										modelview, projection, viewport,
-		//										&worldX, &worldY, &worldZ);
-		//									screen.push_back(glm::vec3(worldX, worldY, worldZ));
-		//								}
-		//							}
-		//							glm::vec3 screenPoint(winX, winY, -100);
-		//
-		//				*/
-		//#pragma endregion
-		//				//vec3 screenPos(x + x * culumScroll, y + y * culumScroll, 0.0f);
-		//				//glm::vec3 dir(farPos - screenPos);
-		//			//localxPos/width, localYpos/height;
-		//			double mouseX = ((width/xPos)/(width / 2))*cameraPos.x;
-		//			double mouseY = ((height / yPos) / (height / 2)) * cameraPos.y;
-		//			vec4 mousePos = vec4(mouseX, mouseY, cameraPos.z,1);
-		//			Ray rayDir(vec3(view * mousePos), rayWor);
-		//			//vec4 camerapos,1
-		//
-		//			int intersectModel = -1;
-		//			for (int i = 0; i < (int)models.size(); i++)
-		//			{
-		//				//bounding box is roughtly right height, X dimens seem off?
-		//				//raypicking needs to be redone, should be able to just check if its in bounds now.
-		//				//also box need to rotate with model
-		//				//models[i].boundBox.rayIntersects(nearPoint, direction)
-		//				//GLUnproject getting contant point regalress of position
-		//				if (models[i].box->intersect(rayDir))
-		//				{
-		//					intersectModel = i;
-		//					break;
-		//				}
-		//			}
-		//
-		//			glm::vec4 nearPoint(x, y, z, 1);
-		//			nearPoint = view * nearPoint;
-		//			nearPoint = nearPoint * glm::vec4(xRotation, yRotation, zRotation, 0);
-		//			vector<glm::vec3> pointsList;
-		//			int closest = 0;
-		//			if (intersectModel != -1)
-		//			{
-		//
-		//				for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
-		//				{
-		//					if (distance(glm::vec3(cameraPos), models[intersectModel].points[i]) < distance(glm::vec3(cameraPos), models[intersectModel].points[closest]))
-		//					{
-		//						closest = i;
-		//					}
-		//
-		//				}
-		//
-		//
-		//				/*printf("\nSelected Point:%f,%f,%f\n",
-		//					models[intersectModel].points[closestScreen].x,
-		//					models[intersectModel].points[closestScreen].y,
-		//					models[intersectModel].points[closestScreen].z);*/
-		//				if (intersectModel != -1 && closest != -1)
-		//				{
-		//					selectedModel = intersectModel;
-		//					selectedPoint = closest;
-		//					movementStart = vec2(localXPos, localYPos);
-		//				}
-		//				//else
-		//				//{
-		//				//	vec3 movement = screenPos - movementStart;
-		//				//	models[intersectModel].points[closest] += vec3(model * vec4(movement, 0));
-		//				//	movementStart = screenPos;
-		//				//	update = true;
-		//
-		//				//	printf("\n%f,%f,%f\n", models[intersectModel].points[closest].x, models[intersectModel].points[closest].y, models[intersectModel].points[closest].z);
-		//				//	/*vec3 upper = models[intersectModel].box->bounds[0];
-		//				//	printf("\n%f,%f,%f\n", upper.x, upper.y, upper.z
-		//				//}
-		//			}
-#pragma endregion UNDER REFACTORING
-
 		//left
 		else if (button == GLFW_MOUSE_BUTTON_1)
 		{
@@ -1546,6 +1410,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 	if (key == GLFW_KEY_SPACE)
 	{
+		ResetValues();
 		cameraPos = glm::vec3(0, 0, 0);
 		scroll = culumScroll = 0;
 		planeSetUp = glm::vec3(1, 1, -1);
@@ -1759,7 +1624,6 @@ int main()
 					if (ImGui::MenuItem("Load"))
 					{
 						LoadSetup(window);
-
 					}
 					if (ImGui::MenuItem("Save"))
 					{
@@ -1793,6 +1657,7 @@ int main()
 						updatePoint = false;
 						update = true;
 						middlePress = false;
+						ClearColour();
 					}
 					ImGui::NextColumn();
 
@@ -1856,8 +1721,7 @@ int main()
 	ImGui::DestroyContext();
 
 	program = NULL;
-	aiReleaseImport(scene);
-
+		
 	glfwDestroyWindow(window);
 	glfwTerminate();
 
