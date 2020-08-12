@@ -1302,9 +1302,9 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					movementStart = vec2(localXPos, localYPos);
 					vec3 pointData = models[selectedModel].points[selectedPoint];
 
-					xUpdate = posStart.x;
-					yUpdate = posStart.y;
-					zUpdate = posStart.z;
+					xUpdate = pointData.x;
+					yUpdate = pointData.y;
+					zUpdate = pointData.z;
 
 				}
 			}
@@ -1402,19 +1402,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_EQUAL && action == GLFW_RELEASE)
 	{
 		moveSize++;
+		UpdateColour(false);
 	}
 	else if (key == GLFW_KEY_MINUS && action == GLFW_RELEASE)
 	{
 		moveSize--;
-	}
-
-	if (key == GLFW_KEY_SPACE)
-	{
-		ResetValues();
-		cameraPos = glm::vec3(0, 0, 0);
-		scroll = culumScroll = 0;
-		planeSetUp = glm::vec3(1, 1, -1);
-		xRotation = yRotation = 0;
+		UpdateColour(false);
 	}
 }
 
@@ -1553,10 +1546,10 @@ void CheckEvents(GLFWwindow* window)
 int main()
 {
 	//hides console window
-	/*WCHAR path[265];
+	WCHAR path[265];
 	GetModuleFileName(NULL, path, 265);
 	HWND console = FindWindow(L"ConsoleWindowClass", path);
-	ShowWindow(console, SW_HIDE);*/
+	ShowWindow(console, SW_HIDE);
 
 #pragma region 
 	update = false;
@@ -1662,6 +1655,8 @@ int main()
 					ImGui::NextColumn();
 
 					ImGui::Text("Number of Selected Points:%d\n", selectedPoints.size());
+					ImGui::Text("Add groups of points with +/-");
+					ImGui::Text("Add specific points using Ctrl");
 					ImGui::InputFloat("XMove", &xMove, 0.01f, 0.1f, "%.8f");
 					ImGui::InputFloat("YMove", &yMove, 0.01f, 0.1f, "%.8f");
 					ImGui::InputFloat("ZMove", &zMove, 0.01f, 0.1f, "%.8f");

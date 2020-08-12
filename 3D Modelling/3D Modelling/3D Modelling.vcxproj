@@ -126,13 +126,15 @@
       <AdditionalDependencies>assimp-vc140-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-        xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc140-mt.dll" "$(OutDir)"
-        xcopy /y "$(ProjDir)lib\GLEW\glew32.dll" "$(OutDir)"
-        xcopy /y "$(ProjDir)lib\GLFW\glfw3.dll" "$(OutDir)"
-        mkdir "$(OutDir)media"
-        xcopy /y "$(ProjDir)media" "$(OutDir)media"
-      </Command>
+      <Command> xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc140-mt.dll" "$(OutDir)"
+
+xcopy /y "$(ProjDir)lib\GLEW\glew32.dll" "$(OutDir)"
+
+xcopy /y "$(ProjDir)lib\GLFW\glfw3.dll" "$(OutDir)"
+
+mkdir "$(OutDir)media"
+
+xcopy /y "$(ProjDir)media" "$(OutDir)media"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -174,6 +176,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\assimp\lib;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\glut;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLFW;C:\Repos\PROC-304-3D-Modelling\3D Modelling\3D Modelling\lib\GLEW;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -182,13 +185,18 @@
       <OptimizeReferences>
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc140-mt.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-        xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc142-mt.dll" "$(OutDir)"
-        xcopy /y "$(ProjDir)lib\GLEW\glew32.dll" "$(OutDir)"
-      </Command>
+      <Command> xcopy /y  "$(ProjDir)lib\assimp\lib\assimp-vc140-mt.dll" "$(OutDir)"
+
+xcopy /y "$(ProjDir)lib\GLEW\glew32.dll" "$(OutDir)"
+
+xcopy /y "$(ProjDir)lib\GLFW\glfw3.dll" "$(OutDir)"
+
+mkdir "$(OutDir)media"
+
+xcopy /y "$(ProjDir)media" "$(OutDir)media"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
