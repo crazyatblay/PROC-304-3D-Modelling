@@ -57,16 +57,6 @@
 using namespace std;
 using namespace Assimp;
 
-/*given in blender:
-dae=0
-abc=? Not going to support
-ply=7/8(inline/binary)
-stl=5/6(inline/binary) not in current use
-fbx=17/18(inline/binary)
-glb/gltf=10/11(inline/binary) not in current use
-obj=3/4
-.x3d=6
-*/
 enum ExportType
 {
 	none = -1,	//Used for Unrecognised formats
@@ -140,8 +130,6 @@ ExportType currentType;
 #define BUFFER_OFFSET(a)((void*)(a))
 #pragma endregion Vars
 
-
-
 void ResetValues()
 {
 
@@ -192,7 +180,6 @@ void getMinMax(vector<glm::vec3> glmVerticies, glm::vec3& Max, glm::vec3& Min)
 	Min.y = y[minY];
 	Min.z = z[minZ];
 }
-
 
 void LoadTexture(Model model, vector<glm::vec2> finalTexture)
 {
@@ -259,7 +246,6 @@ set<int> RecursiveMap(int selectedPoint, int remainingDistance)
 	returnSet.insert(combineSet.begin(), combineSet.end());;
 	return returnSet;
 }
-
 
 void ClearColour()
 {
@@ -660,8 +646,6 @@ void SplitInput(string input)
 	currentType = compareInput(fileTypeLoc);
 }
 
-
-
 void LoadSetup(GLFWwindow* window)
 {
 	models.clear();
@@ -717,7 +701,7 @@ void LoadSetup(GLFWwindow* window)
 				}
 				string path = filePath + fileName + fileExt;
 
-				
+
 				scene = importer.ReadFile(path.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
 
 				if (scene == nullptr)
@@ -803,7 +787,7 @@ aiReturn saveScene(string FileName, ExportType ex)
 			vecsList.clear();
 			//facesList.clear();doens't like clearing faces? unsure why but whatever.
 		}
-		
+
 		aiReturn result = exporter.Export(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 		return result;// aiExportScene(scene, aiGetExportFormatDescription(ex)->id, output.c_str(), NULL);
 	}
@@ -1009,7 +993,6 @@ glm::vec3 setUpPlane(vec3 setupPoint)
 	//at 0,0,-z, no change to z
 	//at 0,0,+z, offset x by diffent bbetween offset and currentPos
 
-	//rad or degree?
 	if (distanceXZ > 8)
 	{
 		distanceXZ /= 2;
@@ -1031,11 +1014,10 @@ glm::vec3 setUpPlane(vec3 setupPoint)
 		angleXZ = -angleXZ;
 	}
 
-	//might need to change for pan
-	float rotatedX = cos(-angleXZ) * (startOffset.x - 0) - sin(-angleXZ) * (startOffset.z - 0) + 0;
-	float rotatedZX = sin(-angleXZ) * (startOffset.x - 0) + cos(-angleXZ) * (startOffset.z - 0) + 0;
+	float rotatedX = cos(-angleXZ) * (startOffset.x + xPan) - sin(-angleXZ) * (startOffset.z - 0) + 0;
+	float rotatedZX = sin(-angleXZ) * (startOffset.x + xPan) + cos(-angleXZ) * (startOffset.z - 0) + 0;
 
-	currOffset.x = -rotatedX;// -setupPoint.x;//final X (correct)	
+	currOffset.x = -rotatedX;
 	currOffset.z += rotatedZX - startPos.z;
 
 
@@ -1054,25 +1036,17 @@ glm::vec3 setUpPlane(vec3 setupPoint)
 		angleYZ = -angleYZ;
 	}
 
-	//same note about pan, see above
-	float rotatedY = cos(angleYZ) * (startOffset.y - 0) - sin(angleYZ) * (startOffset.z - 0) + 0;//1
-	float rotatedZY = sin(-angleYZ) * (startOffset.y - 0) + cos(-angleYZ) * (startOffset.z - 0) + 0;//-5
+	float rotatedY = cos(angleYZ) * (startOffset.y + yPan) - sin(angleYZ) * (startOffset.z - 0) + 0;//1
+	float rotatedZY = sin(-angleYZ) * (startOffset.y + yPan) + cos(-angleYZ) * (startOffset.z - 0) + 0;//-5
 
-	currOffset.y = rotatedY;// -setupPoint.y;//final X (correct)
+	currOffset.y = rotatedY;
 	currOffset.z += rotatedZY - startPos.z;
 
-	//glRotatef(angleXZ, currOffset.x, 0, currOffset.z);
-	//at 5,0,-10, offset by 0.5?
-	//at 0,5,-10, offset by 0,5?
-
-	//double zChange = (yDiff * 0.5) + (xDiff * 0.5);
-	//
 	//camPos should be at screen centre, planeSetup should be at -0.5,0.5 screen
 	if (culumScroll > 0)
 	{
 		currOffset.x = -currOffset.x;
 	}
-	//printf("CAM:%f,%f,%f\nOff:%f,%f,%f\n", cameraPos.x, cameraPos.y, cameraPos.z, planeSetUp.x, planeSetUp.y, planeSetUp.z);
 
 	return currOffset;
 }
@@ -1266,18 +1240,10 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 					}
 				}
 				closest = resultTest[closest];
-				/*for (int i = 1; i < (int)models[intersectModel].points.size(); i++)
-				{
-					if (distance(posStart, models[intersectModel].points[i]) < distance(posStart, models[intersectModel].points[closest]))
-					{
-						closest = i;
-					}
 
-				}*/
 
 				if (intersectModel != -1 && closest != -1)
 				{
-
 					selectedPoint = closest;
 
 					if (mods == GLFW_MOD_CONTROL)
@@ -1340,8 +1306,6 @@ void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 				//selectedModel = selectedPoint = -1;
 				movementStart = glm::vec2(0, 0);
 
-				//}
-
 			}
 		}
 		else if (button == GLFW_MOUSE_BUTTON_2)
@@ -1375,28 +1339,23 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 	if (key == GLFW_KEY_W)
 	{
-		cameraPos.y += 0.1;
-		planeSetUp.y += 0.1;
+		cameraPos.y += 0.2;
+		planeSetUp.y += 0.2;
 	}
 	if (key == GLFW_KEY_S)
 	{
-		cameraPos.y -= 0.1;
-		planeSetUp.y -= 0.1;
+		cameraPos.y -= 0.2;
+		planeSetUp.y -= 0.2;
 	}
 	if (key == GLFW_KEY_A)
 	{
-		cameraPos.x -= 0.1;
-		planeSetUp.x -= 0.1;
+		cameraPos.x -= 0.2;
+		planeSetUp.x -= 0.2;
 	}
 	if (key == GLFW_KEY_D)
 	{
-		cameraPos.x += 0.1;
-		planeSetUp.x += 0.1;
-	}
-
-	if (key == GLFW_KEY_Y && action == GLFW_RELEASE)
-	{
-		setUpPlane(planeSetUp);
+		cameraPos.x += 0.2;
+		planeSetUp.x += 0.2;
 	}
 
 	if (key == GLFW_KEY_EQUAL && action == GLFW_RELEASE)
@@ -1538,10 +1497,8 @@ void CheckEvents(GLFWwindow* window)
 		planeSetUp.y = min(max(planeSetUp.y, -5), 5);
 		planeSetUp.z = min(max(planeSetUp.z, -5), 5);
 		xRotation = yRotation = 0;
-		glm::mat4 Tin = translate(mat4(1.0f), cameraPos);
 	}
 }
-
 
 int main()
 {
@@ -1716,7 +1673,7 @@ int main()
 	ImGui::DestroyContext();
 
 	program = NULL;
-		
+
 	glfwDestroyWindow(window);
 	glfwTerminate();
 

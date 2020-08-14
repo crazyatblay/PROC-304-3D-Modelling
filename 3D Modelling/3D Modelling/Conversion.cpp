@@ -4,8 +4,6 @@
 
 #include "Conversion.h"
 
-
-
 vec3 Conversion::Vec3ConversionAi(aiVector3D* vecIn)
 {
 	if (vecIn == NULL)
@@ -21,25 +19,6 @@ aiVector3D Conversion::Vec3ConversionGLM(vec3 vecIn)
 {
 	return aiVector3D(vecIn.x, vecIn.y, vecIn.z);
 }
-//
-//std::vector<GLuint> lookupSort(std::vector<glm::vec3>lookup, std::vector<GLuint>indicies)
-//{
-//	int startVal = lookup.size() / 3;
-//	for (int i = startVal; i < indicies.size(); i++)
-//	{
-//		int point = indicies[i];
-//		for (int j = 0; j < startVal; j++)
-//		{
-//			if (lookup[i] == lookup[j])
-//			{
-//				indicies[i] = j;
-//			}
-//		}
-//
-//	}
-//	return indicies;
-//}
-
 
 std::vector<GLuint> Conversion::lookupSort(std::vector<vec3> lookup, std::vector<GLuint> indicies)
 {
@@ -60,7 +39,6 @@ std::vector<GLuint> Conversion::lookupSort(std::vector<vec3> lookup, std::vector
 			}
 		}
 	}
-
 
 	for (int i = indicies.size() / 3; i < indicies.size(); i++)
 	{
@@ -91,7 +69,7 @@ std::vector<aiFace> Conversion::parseGLMIndicies(std::vector<GLuint> indicies)
 	std::vector<aiFace> faces;
 	for (int i = 0; i < indicies.size(); i += 3)
 	{
-		/*std::vector<unsigned int> locInd;*/
+		
 		//making faces up of three indicies
 		const unsigned int faceIndicies = 3;
 		aiFace* locFace = new aiFace();
